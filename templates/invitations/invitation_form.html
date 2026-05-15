@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Invitation{% endblock %}
+
+{% block content %}
+<main class="form-layout">
+    <section class="form-panel">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow">{% if form.instance.pk %}Modification{% else %}Creation{% endif %}</p>
+                <h1>{% if form.instance.pk %}Modifier un invite{% else %}Ajouter un invite{% endif %}</h1>
+            </div>
+            <a class="button button-secondary" href="{% url 'invitations:list' %}">Retour a la liste</a>
+        </div>
+
+        <form method="post" class="invitation-form">
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="field-group">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                <div class="error-list">{{ field.errors }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <button class="button button-primary" type="submit">
+                {% if form.instance.pk %}Enregistrer les modifications{% else %}Generer l'invitation{% endif %}
+            </button>
+        </form>
+    </section>
+
+    <aside class="preview-panel">
+        <p class="eyebrow">Regle metier</p>
+        <div class="preview-card">
+            <span class="badge">Edition minimale</span>
+            <h2>Nom + place uniquement</h2>
+            <p class="preview-copy">
+                Le type de ceremonie vient de votre abonnement. Une fois l'invitation imprimee
+                ou partagee via WhatsApp, elle devient automatiquement non modifiable.
+            </p>
+            <div class="preview-seat">QR code telechargeable seulement apres paiement valide.</div>
+        </div>
+    </aside>
+</main>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Rapport admin{% endblock %}
+
+{% block content %}
+<main class="dashboard">
+    <section class="hero-card">
+        <div class="hero-copy">
+            <p class="eyebrow">Administration</p>
+            <h1>Rapport global des utilisateurs et abonnements.</h1>
+            <p class="hero-text">
+                Cette vue complete le panneau Django Admin. Vous pouvez imprimer ce rapport
+                ou ouvrir directement les ecrans d'administration des utilisateurs, profils et abonnements.
+            </p>
+            <div class="action-row no-print">
+                <button class="button button-primary" onclick="window.print()">Imprimer le rapport</button>
+                <a class="button button-secondary" href="{% url 'invitations:staff-report-excel' %}">Exporter Excel</a>
+                <a class="button button-secondary" href="/admin/auth/user/">Utilisateurs</a>
+                <a class="button button-secondary" href="/admin/invitations/subscription/">Abonnements</a>
+                <a class="button button-secondary" href="/admin/auth/user/add/">Ajouter un utilisateur</a>
+            </div>
+        </div>
+        <div class="hero-stats">
+            <article class="stat-card">
+                <span>Utilisateurs</span>
+                <strong>{{ totals.users }}</strong>
+            </article>
+            <article class="stat-card">
+                <span>Organisateurs</span>
+                <strong>{{ totals.organizers }}</strong>
+            </article>
+            <article class="stat-card">
+                <span>Abonnements</span>
+                <strong>{{ totals.subscriptions }}</strong>
+            </article>
+            <article class="stat-card">
+                <span>Abonnements payes</span>
+                <strong>{{ totals.paid_subscriptions }}</strong>
+            </article>
+        </div>
+    </section>
+
+    <section class="listing-section">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow">Utilisateurs</p>
+                <h2>Profils organisateurs</h2>
+            </div>
+        </div>
+        <div class="card-grid">
+            {% for profile in profiles %}
+            <article class="invite-card">
+                <span class="badge">{{ profile.get_event_label }}</span>
+                <h3>{{ profile.user.get_full_name|default:profile.user.username }}</h3>
+                <p>{{ profile.user.email|default:"Email non renseigne" }}</p>
+                <dl>
+                    <div>
+                        <dt>Telephone</dt>
+                        <dd>{{ profile.phone_number|default:"-" }}</dd>
+                    </div>
+                    <div>
+                        <dt>Invitations prevues</dt>
+                        <dd>{{ profile.planned_invitations }}</dd>
+                    </div>
+                </dl>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+
+    <section class="listing-section">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow">Abonnements</p>
+                <h2>Toutes les souscriptions</h2>
+            </div>
+        </div>
+        <div class="card-grid">
+            {% for subscription in subscriptions %}
+            <article class="invite-card">
+                <span class="badge">{{ subscription.get_provider_display }}</span>
+                <h3>{{ subscription.organizer.user.username }}</h3>
+                <p>{{ subscription.get_plan_code_display }} - {{ subscription.price_usd }} USD</p>
+                <dl>
+                    <div>
+                        <dt>Statut</dt>
+                        <dd>{% if subscription.is_paid %}Paye{% else %}En attente{% endif %}</dd>
+                    </div>
+                    <div>
+                        <dt>Quota</dt>
+                        <dd>{% if subscription.invitation_limit %}{{ subscription.invitation_limit }}{% else %}Illimite{% endif %}</dd>
+                    </div>
+                </dl>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+</main>
+{% endblock %}

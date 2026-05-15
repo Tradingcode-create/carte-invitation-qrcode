@@ -1,0 +1,50 @@
+from django.urls import path
+
+from .views import (
+    ContactAdminView,
+    HomeView,
+    InvitationCreateView,
+    InvitationDeleteView,
+    InvitationDetailView,
+    InvitationExcelImportView,
+    InvitationListView,
+    InvitationUpdateView,
+    SharedInvitationDetailView,
+    SignUpView,
+    StaffReportExcelView,
+    StaffReportView,
+    SubscriptionDashboardView,
+    download_excel_template,
+    download_invitation_image,
+    download_qrcode,
+    mark_printed,
+    mark_shared,
+    payment_callback,
+    start_payment,
+)
+
+
+app_name = "invitations"
+
+urlpatterns = [
+    path("", HomeView.as_view(), name="home"),
+    path("inscription/", SignUpView.as_view(), name="signup"),
+    path("abonnement/", SubscriptionDashboardView.as_view(), name="subscription"),
+    path("contact-admin/", ContactAdminView.as_view(), name="contact-admin"),
+    path("staff/rapport/", StaffReportView.as_view(), name="staff-report"),
+    path("staff/rapport/excel/", StaffReportExcelView.as_view(), name="staff-report-excel"),
+    path("paiement/demarrer/", start_payment, name="start-payment"),
+    path("paiement/callback/<str:provider>/", payment_callback, name="payment-callback"),
+    path("invites/", InvitationListView.as_view(), name="list"),
+    path("invites/import-excel/", InvitationExcelImportView.as_view(), name="import-excel"),
+    path("invites/modele-excel/", download_excel_template, name="excel-template"),
+    path("nouvelle/", InvitationCreateView.as_view(), name="create"),
+    path("invitation/<slug:slug>/", InvitationDetailView.as_view(), name="detail"),
+    path("invitation/<slug:slug>/modifier/", InvitationUpdateView.as_view(), name="update"),
+    path("invitation/<slug:slug>/supprimer/", InvitationDeleteView.as_view(), name="delete"),
+    path("invitation/<slug:slug>/imprimer/", mark_printed, name="print"),
+    path("invitation/<slug:slug>/partager/", mark_shared, name="share"),
+    path("invitation/<slug:slug>/qrcode/", download_qrcode, name="download-qrcode"),
+    path("invitation/<slug:slug>/image/", download_invitation_image, name="download-image"),
+    path("i/<uuid:token>/", SharedInvitationDetailView.as_view(), name="shared-detail"),
+]

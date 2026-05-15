@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Contacter l'admin{% endblock %}
+
+{% block content %}
+<main class="form-layout">
+    <section class="form-panel">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow">Support</p>
+                <h1>Contacter l'administration</h1>
+            </div>
+        </div>
+        <p class="hero-text">
+            Utilisez ce formulaire si vous avez besoin d'aide pour votre abonnement, vos invitations ou vos paiements.
+        </p>
+        <form method="post" class="invitation-form">
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="field-group">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                <div class="error-list">{{ field.errors }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <button class="button button-primary" type="submit">Envoyer le message</button>
+        </form>
+    </section>
+
+    <aside class="preview-panel">
+        <p class="eyebrow">Assistance</p>
+        <div class="preview-card">
+            <span class="badge">Contact direct</span>
+            <h2>Un message clair et rapide</h2>
+            <p class="preview-copy">
+                L'administrateur recevra votre demande avec votre identite, votre ceremonie et votre contact.
+            </p>
+            <div class="preview-seat">La destination email d'administration est definie dans la configuration du site.</div>
+        </div>
+    </aside>
+</main>
+{% endblock %}

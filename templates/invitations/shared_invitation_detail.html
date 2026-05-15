@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Invitation partagee{% endblock %}
+
+{% block content %}
+<main class="print-page">
+    <article class="invitation-sheet invitation-{{ invitation.event_type }}">
+        <div class="sheet-header">
+            <div>
+                <p class="eyebrow">Invitation partagee</p>
+                <h1>{{ invitation.event_label }}</h1>
+            </div>
+            <span class="badge">{{ invitation.guest_name }}</span>
+        </div>
+        <div class="sheet-body">
+            <section class="sheet-copy">
+                <p class="lead">{{ invitation.guest_name }}</p>
+                <p class="sheet-text">Votre place reservee est <strong>{{ invitation.seat_location }}</strong>.</p>
+            </section>
+            <aside class="qr-panel">
+                {% if invitation.qr_code %}
+                <img src="{{ invitation.qr_code.url }}" alt="QR code de l'invitation">
+                {% endif %}
+            </aside>
+        </div>
+    </article>
+</main>
+{% endblock %}

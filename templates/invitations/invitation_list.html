@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Mes invites{% endblock %}
+
+{% block content %}
+<main class="dashboard">
+    <section class="listing-section">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow">Gestion des invites</p>
+                <h1>Votre liste d'invitations</h1>
+            </div>
+            <div class="action-row">
+                <span class="badge">
+                    {% if subscription.remaining_invitations == None %}
+                    Illimite
+                    {% else %}
+                    {{ subscription.remaining_invitations }} restantes
+                    {% endif %}
+                </span>
+                <a class="button button-primary" href="{% url 'invitations:create' %}">Ajouter un invite</a>
+            </div>
+        </div>
+
+        <div class="import-panel">
+            <div>
+                <p class="eyebrow">Import rapide</p>
+                <h2>Generer des invitations depuis Excel</h2>
+                <p class="hero-text">
+                    Chargez un fichier `.xlsx` avec deux colonnes: le nom du couple ou de l'invite,
+                    puis son emplacement dans la salle.
+                </p>
+            </div>
+            <form method="post" action="{% url 'invitations:import-excel' %}" enctype="multipart/form-data" class="import-form">
+                {% csrf_token %}
+                <div class="field-group">
+                    <label for="{{ upload_form.excel_file.id_for_label }}">{{ upload_form.excel_file.label }}</label>
+                    {{ upload_form.excel_file }}
+                    {% if upload_form.excel_file.help_text %}
+                    <small class="field-help">{{ upload_form.excel_file.help_text }}</small>
+                    {% endif %}
+                </div>
+                <div class="action-row">
+                    <button class="button button-primary" type="submit">Importer et generer</button>
+                    <a class="button button-secondary" href="{% url 'invitations:excel-template' %}">Telecharger le modele</a>
+                </div>
+            </form>
+        </div>
+
+        <div class="card-grid">
+            {% for invitation in invitations %}
+            <article class="invite-card">
+                <span class="badge">{{ invitation.event_label }}</span>
+                <h3>{{ invitation.guest_name }}</h3>
+                <p>Place: {{ invitation.seat_location }}</p>
+                <dl>
+                    <div>
+                        <dt>Etat</dt>
+                        <dd>{% if invitation.is_locked %}Verrouillee{% else %}Editable{% endif %}</dd>
+                    </div>
+                    <div>
+                        <dt>QRCode</dt>
+                        <dd>{% if invitation.qr_code %}Pret{% else %}En attente{% endif %}</dd>
+                    </div>
+                </dl>
+                <a class="text-link" href="{% url 'invitations:detail' invitation.slug %}">Voir le detail</a>
+            </article>
+            {% empty %}
+            <article class="empty-card">
+                <h3>Pas encore d'invites</h3>
+                <p>Ajoutez vos premiers noms et placements pour lancer la production.</p>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+</main>
+{% endblock %}

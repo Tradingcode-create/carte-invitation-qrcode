@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Inscription{% endblock %}
+
+{% block content %}
+<main class="form-layout">
+    <section class="form-panel">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow">Inscription</p>
+                <h1>Creer un compte organisateur</h1>
+            </div>
+        </div>
+        <form method="post" class="invitation-form">
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="field-group">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}
+                <small class="field-help">{{ field.help_text|safe }}</small>
+                {% endif %}
+                {% if field.errors %}
+                <div class="error-list">{{ field.errors }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+            <button class="button button-primary" type="submit">Creer mon compte</button>
+        </form>
+    </section>
+
+    <aside class="preview-panel">
+        <p class="eyebrow">Tarification</p>
+        <div class="preview-card">
+            <span class="badge">Plans disponibles</span>
+            <h2>3 categories d'abonnement</h2>
+            <p class="preview-copy">
+                1 a 199 invitations: 79,9 USD. 200 a 599: 239,9 USD. Illimite: 999,9 USD.
+            </p>
+            <div class="preview-seat">Le choix du volume determine automatiquement la formule. Pour les tests, vous pouvez ensuite payer avec la carte demo Visa.</div>
+        </div>
+    </aside>
+</main>
+{% endblock %}

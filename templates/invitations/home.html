@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Invitation QR Studio{% endblock %}
+
+{% block content %}
+<main class="dashboard">
+    {% if user.is_authenticated and profile %}
+    <section class="hero-card">
+        <div class="hero-copy">
+            <p class="eyebrow">Tableau de bord</p>
+            <h1>Vos invitations {{ profile.get_event_label|lower }} sont sous controle.</h1>
+            <p class="hero-text">
+                Votre formule active pilote le quota, le paiement, le telechargement du QR code
+                et le verrouillage apres impression ou partage WhatsApp.
+            </p>
+            <div class="action-row">
+                <a class="button button-primary" href="{% url 'invitations:create' %}">Creer une invitation</a>
+                <a class="button button-secondary" href="{% url 'invitations:subscription' %}">Voir mon abonnement</a>
+            </div>
+        </div>
+        <div class="hero-stats">
+            <article class="stat-card">
+                <span>Total invitations</span>
+                <strong>{{ stats.total }}</strong>
+            </article>
+            <article class="stat-card">
+                <span>Deja imprimees</span>
+                <strong>{{ stats.printed }}</strong>
+            </article>
+            <article class="stat-card">
+                <span>Partagees WhatsApp</span>
+                <strong>{{ stats.shared }}</strong>
+            </article>
+            <article class="stat-card">
+                <span>Quota restant</span>
+                <strong>{% if stats.remaining == None %}Illimite{% else %}{{ stats.remaining }}{% endif %}</strong>
+            </article>
+        </div>
+    </section>
+
+    <section class="listing-section">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow">Abonnement</p>
+                <h2>{{ subscription.get_plan_code_display }}</h2>
+            </div>
+            <span class="badge">{{ subscription.price_usd }} USD</span>
+        </div>
+
+        <div class="card-grid">
+            {% for invitation in invitations %}
+            <article class="invite-card">
+                <span class="badge">{{ invitation.event_label }}</span>
+                <h3>{{ invitation.guest_name }}</h3>
+                <p>Place: {{ invitation.seat_location }}</p>
+                <dl>
+                    <div>
+                        <dt>Statut</dt>
+                        <dd>{% if invitation.is_locked %}Verrouillee{% else %}Editable{% endif %}</dd>
+                    </div>
+                    <div>
+                        <dt>Creee</dt>
+                        <dd>{{ invitation.created_at|date:"d/m/Y H:i" }}</dd>
+                    </div>
+                </dl>
+                <a class="text-link" href="{% url 'invitations:detail' invitation.slug %}">Ouvrir l'invitation</a>
+            </article>
+            {% empty %}
+            <article class="empty-card">
+                <h3>Aucun invite pour le moment</h3>
+                <p>Votre abonnement est pret. Creez votre premiere invitation a partir du nom et de la place.</p>
+                <a class="button button-primary" href="{% url 'invitations:create' %}">Commencer</a>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+    {% else %}
+    <section class="hero-card">
+        <div class="hero-copy">
+            <p class="eyebrow">RDC Friendly</p>
+            <h1>Invitations elegantes, QR code telechargeable et paiement Mobile Money.</h1>
+            <p class="hero-text">
+                Chaque organisateur cree son compte, choisit sa ceremonie, son volume d'invitations,
+                puis active son abonnement via Airtel Money, Orange Money, AfriMoney ou M-Pesa.
+            </p>
+            <div class="action-row">
+                <a class="button button-primary" href="{% url 'invitations:signup' %}">Creer mon compte</a>
+                <a class="button button-secondary" href="{% url 'login' %}">Me connecter</a>
+            </div>
+        </div>
+        <div class="hero-stats">
+            {% for plan in plans %}
+            <article class="stat-card">
+                <span>{{ plan.name }}</span>
+                <strong>{{ plan.price }}</strong>
+                <p>{{ plan.range }}</p>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</main>
+{% endblock %}

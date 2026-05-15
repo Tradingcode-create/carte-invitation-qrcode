@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+{% load static %}
+
+{% block title %}Administration Invitation QR Studio{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<style>
+  :root {
+    --primary: #0f5d5e;
+    --secondary: #c67d2d;
+  }
+  #header {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: #fff;
+  }
+  #site-name a {
+    color: #fff;
+    font-weight: 700;
+  }
+  .module caption,
+  .inline-group h2 {
+    background: rgba(15, 93, 94, 0.08);
+    color: #123739;
+  }
+  div.breadcrumbs {
+    background: #123739;
+  }
+</style>
+{% endblock %}
+
+{% block branding %}
+<h1 id="site-name"><a href="{% url 'admin:index' %}">Invitation QR Studio Administration</a></h1>
+{% endblock %}
+
+{% block nav-global %}
+<div style="padding: 10px 18px;">
+  <a href="{% url 'invitations:staff-report' %}" style="color: white; margin-right: 16px;">Rapport staff</a>
+  <a href="{% url 'invitations:home' %}" style="color: white;">Retour au site</a>
+</div>
+{% endblock %}

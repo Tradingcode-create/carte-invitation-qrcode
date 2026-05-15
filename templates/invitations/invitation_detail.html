@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Invitation {{ invitation.guest_name }}{% endblock %}
+
+{% block content %}
+<main class="print-page">
+    <div class="toolbar no-print">
+        <a class="button button-secondary" href="{% url 'invitations:list' %}">Retour aux invites</a>
+        {% if can_edit %}
+        <a class="button button-secondary" href="{% url 'invitations:update' invitation.slug %}">Modifier</a>
+        <form method="post" action="{% url 'invitations:delete' invitation.slug %}">
+            {% csrf_token %}
+            <button class="button button-secondary" type="submit">Supprimer</button>
+        </form>
+        {% endif %}
+        <form method="post" action="{% url 'invitations:print' invitation.slug %}">
+            {% csrf_token %}
+            <button class="button button-primary" type="submit">Imprimer</button>
+        </form>
+        <form method="post" action="{% url 'invitations:share' invitation.slug %}">
+            {% csrf_token %}
+            <button class="button button-secondary" type="submit">Partager sur WhatsApp</button>
+        </form>
+        {% if download_enabled %}
+        <a class="button button-secondary" href="{% url 'invitations:download-image' invitation.slug %}">Telecharger en JPEG</a>
+        <a class="button button-secondary" href="{% url 'invitations:download-qrcode' invitation.slug %}">Telecharger le QR code</a>
+        {% endif %}
+    </div>
+
+    <article class="invitation-sheet invitation-{{ invitation.event_type }}">
+        <div class="sheet-header">
+            <div>
+                <p class="eyebrow">Invitation personnalisee</p>
+                <h1>{{ invitation.event_label }}</h1>
+            </div>
+            <span class="badge">{% if invitation.is_locked %}Verrouillee{% else %}Editable{% endif %}</span>
+        </div>
+
+        <div class="sheet-body">
+            <section class="sheet-copy">
+                <p class="lead">{{ invitation.guest_name }}</p>
+                <p class="sheet-text">
+                    Vous etes cordialement invite a cette ceremonie. Votre place reservee est:
+                    <strong>{{ invitation.seat_location }}</strong>.
+                </p>
+                <div class="meta-grid">
+                    <div>
+                        <span>Type</span>
+                        <strong>{{ invitation.event_label }}</strong>
+                    </div>
+                    <div>
+                        <span>Invite</span>
+                        <strong>{{ invitation.guest_name }}</strong>
+                    </div>
+                    <div>
+                        <span>Place</span>
+                        <strong>{{ invitation.seat_location }}</strong>
+                    </div>
+                    <div>
+                        <span>Partage WhatsApp</span>
+                        <strong>{% if invitation.whatsapp_shared_at %}Oui{% else %}Non{% endif %}</strong>
+                    </div>
+                </div>
+            </section>
+
+            <aside class="qr-panel">
+                {% if invitation.qr_code %}
+                <img src="{{ invitation.qr_code.url }}" alt="QR code de l'invitation">
+                {% endif %}
+                <p>Le QR code est sauvegardable apres paiement confirme.</p>
+                {% if invitation.printed_at %}
+                <p>Imprimee le {{ invitation.printed_at|date:"d/m/Y H:i" }}</p>
+                {% endif %}
+            </aside>
+        </div>
+    </article>
+</main>
+
+{% if request.GET.autoprint %}
+<script>
+window.addEventListener("load", function () {
+    window.print();
+});
+</script>
+{% endif %}
+{% endblock %}
