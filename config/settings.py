@@ -5,7 +5,7 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = "django-insecure-change-me-before-production"
-DEBUG = os.environ.get("DEBUG", "False") == "True"
+DEBUG = True
 ALLOWED_HOSTS = [
     ".onrender.com",
     "localhost",
@@ -38,6 +38,7 @@ ROOT_URLCONF = "config.urls"
 
 TEMPLATES = [
     {
+
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
@@ -48,8 +49,11 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
             ],
         },
+
     },
+    
 ]
+
 
 WSGI_APPLICATION = "config.wsgi.application"
 
