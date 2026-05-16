@@ -369,12 +369,13 @@ p {
 }
 
 .button-primary {
-    color: white;
+    color: #111111;
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
     box-shadow: 0 14px 28px rgba(15, 93, 94, 0.24);
 }
 
 .button-secondary {
+    color: #111111;
     background: rgba(255, 255, 255, 0.72);
     border: 1px solid var(--line);
 }
@@ -459,6 +460,15 @@ p {
     max-width: 100%;
     height: auto;
     display: block;
+}
+
+.language-form {
+    min-width: 78px;
+}
+
+.language-select {
+    min-width: 78px;
+    padding: 0.7rem 0.9rem;
 }
 
 .toolbar {

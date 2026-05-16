@@ -12,12 +12,15 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.mail import send_mail
+from django.db.models import Q, Sum
 from django.db import transaction
 from django.db.models import Count
-from django.http import FileResponse, Http404, HttpResponse, HttpResponseForbidden
+from django.http import FileResponse, Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
+from django.utils import translation
 from django.utils import timezone
+#from django.utils.translation import LANGUAGE_SESSION_KEY
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -25,7 +28,8 @@ from django.views.generic import CreateView, DetailView, ListView, TemplateView,
 from openpyxl import Workbook, load_workbook
 from PIL import Image, ImageDraw, ImageFont
 
-from .forms import AdminSupportReplyForm, ContactAdminForm, ExcelUploadForm, InvitationForm, PaymentInitiationForm, SignUpForm
+from .forms import AdminSupportReplyForm, ContactAdminForm, ContactAdminReplyForm, ExcelUploadForm, InvitationForm, PaymentInitiationForm, SignUpForm
+from .localization import tr_text
 from .models import Invitation, OrganizerProfile, PaymentTransaction, Subscription, SupportMessage
 
 
@@ -112,16 +116,19 @@ def build_invitation_jpeg(invitation):
     body_font = _load_font(30)
     small_font = _load_font(24)
 
-    draw.text((90, 140), f"Invitation {invitation.event_label}", fill="#0f5d5e", font=subtitle_font)
+    draw.text((90, 140), tr_text(f"Invitation {invitation.event_label}", f"{invitation.event_label} Invitation"), fill="#0f5d5e", font=subtitle_font)
     draw.text((90, 240), invitation.guest_name, fill="#1f1a17", font=title_font)
-    draw.text((90, 360), f"Place reservee: {invitation.seat_location}", fill="#6e6258", font=body_font)
+    draw.text((90, 360), tr_text(f"Place reservee: {invitation.seat_location}", f"Reserved seat: {invitation.seat_location}"), fill="#6e6258", font=body_font)
     draw.text(
         (90, 430),
-        f"Organisateur: {invitation.organizer.user.get_full_name() or invitation.organizer.user.username}",
+        tr_text(
+            f"Organisateur: {invitation.organizer.user.get_full_name() or invitation.organizer.user.username}",
+            f"Organizer: {invitation.organizer.user.get_full_name() or invitation.organizer.user.username}",
+        ),
         fill="#6e6258",
         font=small_font,
     )
-    draw.text((90, 500), "QR code integre pour controle et placement", fill="#0f5d5e", font=small_font)
+    draw.text((90, 500), tr_text("QR code integre pour controle et placement", "QR code embedded for access and seating"), fill="#0f5d5e", font=small_font)
 
     if invitation.qr_code:
         with invitation.qr_code.open("rb") as qr_file:
@@ -167,6 +174,41 @@ def build_staff_report_workbook():
             ]
         )
     return workbook
+
+
+def build_staff_stats():
+    now = timezone.now()
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    active_cutoff = now - timezone.timedelta(days=30)
+
+    invitations_ordered = OrganizerProfile.objects.aggregate(total=Sum("planned_invitations"))["total"] or 0
+    invitations_used = Invitation.objects.count()
+    active_users = OrganizerProfile.objects.filter(last_seen_at__gte=active_cutoff).count()
+    inactive_users = OrganizerProfile.objects.count() - active_users
+    monthly_revenue = (
+        Subscription.objects.filter(is_paid=True, paid_at__gte=month_start).aggregate(total=Sum("price_usd"))["total"]
+        or 0
+    )
+
+    return {
+        "ceremonies": list(
+            OrganizerProfile.objects.values("ceremony_type").annotate(total=Count("id")).order_by("ceremony_type")
+        ),
+        "plans": list(
+            Subscription.objects.values("plan_code").annotate(total=Count("id")).order_by("plan_code")
+        ),
+        "usage": [
+            {"label": tr_text("Commandees", "Ordered"), "total": invitations_ordered},
+            {"label": tr_text("Utilisees", "Used"), "total": invitations_used},
+        ],
+        "activity": [
+            {"label": tr_text("Actifs", "Active"), "total": active_users},
+            {"label": tr_text("Non actifs", "Inactive"), "total": max(inactive_users, 0)},
+        ],
+        "revenue": [
+            {"label": month_start.strftime("%b %Y"), "total": float(monthly_revenue)},
+        ],
+    }
 
 
 def create_invitations_from_workbook(profile, excel_file):
@@ -235,9 +277,9 @@ class HomeView(TemplateView):
             )
         else:
             context["plans"] = [
-                {"name": "Starter", "range": "1 a 199 invitations", "price": "79,9 $"},
-                {"name": "Pro", "range": "200 a 599 invitations", "price": "239,9 $"},
-                {"name": "Unlimited", "range": "Illimite", "price": "999,9 $"},
+                {"name": "Starter", "range": tr_text("1 a 199 invitations", "1 to 199 invitations"), "price": "79,9 $"},
+                {"name": "Pro", "range": tr_text("200 a 599 invitations", "200 to 599 invitations"), "price": "239,9 $"},
+                {"name": tr_text("Illimite", "Unlimited"), "range": tr_text("Illimite", "Unlimited"), "price": "999,9 $"},
             ]
         return context
 
@@ -254,11 +296,38 @@ class SignUpView(CreateView):
             ceremony_type=form.cleaned_data["ceremony_type"],
             planned_invitations=form.cleaned_data["planned_invitations"],
             phone_number=form.cleaned_data["phone_number"],
+            preferred_language=form.cleaned_data["preferred_language"],
         )
         _build_subscription(profile, form.cleaned_data["provider"])
+        language = form.cleaned_data["preferred_language"][:2]
         login(self.request, self.object)
-        messages.success(self.request, "Votre compte a ete cree. Finalisez maintenant votre paiement.")
+        self.request.session[LANGUAGE_SESSION_KEY] = language
+        translation.activate(language)
+        self.request.LANGUAGE_CODE = language
+        messages.success(
+            self.request,
+            tr_text("Votre compte a ete cree. Finalisez maintenant votre paiement.", "Your account has been created. Complete your payment now."),
+        )
         return redirect("invitations:subscription")
+
+
+@require_POST
+def set_language_preference(request):
+    language = (request.POST.get("language") or OrganizerProfile.LANG_FR)[:2]
+    if language not in {OrganizerProfile.LANG_FR, OrganizerProfile.LANG_EN}:
+        language = OrganizerProfile.LANG_FR
+
+    request.session[LANGUAGE_SESSION_KEY] = language
+    translation.activate(language)
+
+    if request.user.is_authenticated:
+        profile = getattr(request.user, "organizer_profile", None)
+        if profile and profile.preferred_language != language:
+            profile.preferred_language = language
+            profile.save(update_fields=["preferred_language"])
+
+    next_url = request.POST.get("next") or reverse("invitations:home")
+    return redirect(next_url)
 
 
 class SubscriptionDashboardView(LoginRequiredMixin, TemplateView):
@@ -455,25 +524,22 @@ class StaffReportView(StaffRequiredMixin, TemplateView):
             "subscription", "subscription__organizer", "subscription__organizer__user"
         )[:20]
         support_messages = SupportMessage.objects.select_related("organizer", "organizer__user", "sender_user")[:12]
-        ceremonies = list(
-            OrganizerProfile.objects.values("ceremony_type").annotate(total=Count("id")).order_by("ceremony_type")
-        )
-        plans = list(Subscription.objects.values("plan_code").annotate(total=Count("id")).order_by("plan_code"))
+        chart_data = build_staff_stats()
         context.update(
             {
                 "profiles": profiles,
                 "subscriptions": subscriptions,
                 "transactions": transactions,
                 "support_messages": support_messages,
-                "chart_data": {
-                    "ceremonies": ceremonies,
-                    "plans": plans,
-                },
+                "chart_data": chart_data,
                 "totals": {
                     "users": User.objects.count(),
                     "organizers": profiles.count(),
                     "subscriptions": subscriptions.count(),
                     "paid_subscriptions": subscriptions.filter(is_paid=True).count(),
+                    "active_users": chart_data["activity"][0]["total"] if chart_data["activity"] else 0,
+                    "inactive_users": chart_data["activity"][1]["total"] if len(chart_data["activity"]) > 1 else 0,
+                    "revenue_month": chart_data["revenue"][0]["total"] if chart_data["revenue"] else 0,
                 },
             }
         )
@@ -500,11 +566,14 @@ class ContactAdminView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["form"] = kwargs.get("form") or ContactAdminForm()
+        context["reply_form"] = kwargs.get("reply_form") or ContactAdminReplyForm()
         profile = getattr(self.request.user, "organizer_profile", None)
         if profile:
             unread_messages = profile.support_messages.filter(sender_type=SupportMessage.SENDER_ADMIN, is_read_by_user=False)
             unread_messages.update(is_read_by_user=True)
             context["messages_thread"] = profile.support_messages.select_related("sender_user")[:30]
+            context["thread_started"] = profile.support_messages.exists()
+            context["can_send_message"] = profile.support_user_can_send
         return context
 
     def post(self, request, *args, **kwargs):
@@ -514,6 +583,12 @@ class ContactAdminView(LoginRequiredMixin, TemplateView):
             if not profile:
                 messages.error(request, "Votre profil organisateur est incomplet.")
                 return redirect("invitations:home")
+            if not profile.support_user_can_send:
+                messages.error(request, "L'envoi de messages a ete desactive par l'administration.")
+                return redirect("invitations:contact-admin")
+            if profile.support_messages.exists():
+                messages.error(request, "Une discussion est deja ouverte. Utilisez le bouton repondre.")
+                return redirect("invitations:contact-admin")
             subject = f"[Contact utilisateur] {form.cleaned_data['subject']}"
             body = (
                 f"Utilisateur: {request.user.get_full_name() or request.user.username}\n"
@@ -538,9 +613,49 @@ class ContactAdminView(LoginRequiredMixin, TemplateView):
                 is_read_by_admin=False,
                 is_read_by_user=True,
             )
+            profile.support_thread_subject = form.cleaned_data["subject"]
+            profile.save(update_fields=["support_thread_subject"])
             messages.success(request, "Votre message a ete envoye a l'administration.")
             return redirect("invitations:contact-admin")
         return self.render_to_response(self.get_context_data(form=form))
+
+
+class ContactAdminReplyView(LoginRequiredMixin, View):
+    def post(self, request):
+        profile = getattr(request.user, "organizer_profile", None)
+        if not profile:
+            messages.error(request, "Votre profil organisateur est incomplet.")
+            return redirect("invitations:home")
+        if not profile.support_messages.exists():
+            messages.error(request, "Aucune discussion n'a encore ete ouverte.")
+            return redirect("invitations:contact-admin")
+        if not profile.support_user_can_send:
+            messages.error(request, "L'administration a desactive vos reponses.")
+            return redirect("invitations:contact-admin")
+
+        form = ContactAdminReplyForm(request.POST)
+        if not form.is_valid():
+            messages.error(request, "Merci de verifier votre reponse avant envoi.")
+            return redirect("invitations:contact-admin")
+
+        SupportMessage.objects.create(
+            organizer=profile,
+            sender_type=SupportMessage.SENDER_USER,
+            sender_user=request.user,
+            subject=profile.support_thread_subject or "Suite de la discussion",
+            message=form.cleaned_data["message"],
+            is_read_by_admin=False,
+            is_read_by_user=True,
+        )
+        send_mail(
+            f"[Suite utilisateur] {profile.support_thread_subject or 'Suite de la discussion'}",
+            form.cleaned_data["message"],
+            settings.DEFAULT_FROM_EMAIL,
+            [settings.ADMIN_CONTACT_EMAIL],
+            fail_silently=False,
+        )
+        messages.success(request, "Votre reponse a ete envoyee a l'administration.")
+        return redirect("invitations:contact-admin")
 
 
 class StaffReplySupportView(StaffRequiredMixin, View):
@@ -569,6 +684,41 @@ class StaffReplySupportView(StaffRequiredMixin, View):
         )
         messages.success(request, "La reponse a ete enregistree et envoyee.")
         return redirect("invitations:staff-report")
+
+
+class StaffToggleSupportView(StaffRequiredMixin, View):
+    def post(self, request, organizer_id):
+        profile = get_object_or_404(OrganizerProfile, pk=organizer_id)
+        profile.support_user_can_send = not profile.support_user_can_send
+        profile.save(update_fields=["support_user_can_send"])
+        messages.success(
+            request,
+            "L'envoi de messages utilisateur a ete active."
+            if profile.support_user_can_send
+            else "L'envoi de messages utilisateur a ete desactive.",
+        )
+        return redirect("invitations:staff-report")
+
+
+@login_required
+def notifications_poll(request):
+    organizer = getattr(request.user, "organizer_profile", None)
+    if request.user.is_staff:
+        unread_count = SupportMessage.objects.filter(sender_type=SupportMessage.SENDER_USER, is_read_by_admin=False).count()
+        latest = SupportMessage.objects.filter(sender_type=SupportMessage.SENDER_USER).order_by("-created_at").first()
+    elif organizer:
+        unread_count = organizer.support_messages.filter(sender_type=SupportMessage.SENDER_ADMIN, is_read_by_user=False).count()
+        latest = organizer.support_messages.filter(sender_type=SupportMessage.SENDER_ADMIN).order_by("-created_at").first()
+    else:
+        unread_count = 0
+        latest = None
+
+    return JsonResponse(
+        {
+            "unread_count": unread_count,
+            "latest_timestamp": latest.created_at.isoformat() if latest else "",
+        }
+    )
 
 
 @login_required

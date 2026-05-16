@@ -1,19 +1,21 @@
 {% extends "base.html" %}
+{% load bilingual %}
 
-{% block title %}Contacter l'admin{% endblock %}
+{% block title %}{% tr "Contacter l admin" "Contact admin" %}{% endblock %}
 
 {% block content %}
 <main class="form-layout">
     <section class="form-panel">
         <div class="section-head">
             <div>
-                <p class="eyebrow">Support</p>
-                <h1>Contacter l'administration</h1>
+                <p class="eyebrow">{% tr "Support" "Support" %}</p>
+                <h1>{% tr "Contacter l administration" "Contact the administration" %}</h1>
             </div>
         </div>
         <p class="hero-text">
-            Utilisez ce formulaire si vous avez besoin d'aide pour votre abonnement, vos invitations ou vos paiements.
+            {% tr "Utilisez ce formulaire si vous avez besoin d aide pour votre abonnement, vos invitations ou vos paiements." "Use this form if you need help with your subscription, invitations, or payments." %}
         </p>
+        {% if not thread_started %}
         <form method="post" class="invitation-form">
             {% csrf_token %}
             {% for field in form %}
@@ -25,40 +27,73 @@
                 {% endif %}
             </div>
             {% endfor %}
-            <button class="button button-primary" type="submit">Envoyer le message</button>
+            <button class="button button-primary" type="submit">{% tr "Envoyer le message" "Send message" %}</button>
         </form>
+        {% else %}
+        <div class="import-panel">
+            <div>
+                <p class="eyebrow">{% tr "Discussion deja ouverte" "Conversation already open" %}</p>
+                <h2>{{ request.user.organizer_profile.support_thread_subject|default:"" }}{% if not request.user.organizer_profile.support_thread_subject %}{% tr "Fil de discussion en cours" "Current discussion thread" %}{% endif %}</h2>
+                <p class="hero-text">
+                    {% tr "Une fois une discussion entamee, toutes les nouvelles demandes passent par le fil existant." "Once a conversation starts, all new requests must continue in the existing thread." %}
+                    {% if not can_send_message %}{% tr "L administration a momentanement desactive vos reponses." "The administration has temporarily disabled your replies." %}{% endif %}
+                </p>
+            </div>
+        </div>
+        {% endif %}
 
         {% if messages_thread %}
         <section class="thread-panel">
             <div class="section-head">
                 <div>
-                    <p class="eyebrow">Messages</p>
-                    <h2>Historique des echanges</h2>
+                    <p class="eyebrow">{% tr "Messages" "Messages" %}</p>
+                    <h2>{% tr "Historique des echanges" "Conversation history" %}</h2>
                 </div>
             </div>
             <div class="message-thread">
                 {% for item in messages_thread %}
                 <article class="thread-bubble {% if item.sender_type == 'admin' %}thread-bubble-admin{% else %}thread-bubble-user{% endif %}">
-                    <span class="badge">{% if item.sender_type == 'admin' %}Administration{% else %}Vous{% endif %}</span>
+                    <span class="badge">{{ item.sender_label }}</span>
                     <h3>{{ item.subject }}</h3>
                     <p>{{ item.message }}</p>
                     <small class="field-help">{{ item.created_at|date:"d/m/Y H:i" }}</small>
                 </article>
                 {% endfor %}
             </div>
+            {% if thread_started and can_send_message %}
+            <form method="post" action="{% url 'invitations:contact-admin-reply' %}" class="invitation-form">
+                {% csrf_token %}
+                <div class="section-head">
+                    <div>
+                        <p class="eyebrow">{% tr "Repondre" "Reply" %}</p>
+                        <h2>{% tr "Continuer cette discussion" "Continue this conversation" %}</h2>
+                    </div>
+                </div>
+                {% for field in reply_form %}
+                <div class="field-group">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                    <div class="error-list">{{ field.errors }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                <button class="button button-primary" type="submit">{% tr "Repondre" "Reply" %}</button>
+            </form>
+            {% endif %}
         </section>
         {% endif %}
     </section>
 
     <aside class="preview-panel">
-        <p class="eyebrow">Assistance</p>
+        <p class="eyebrow">{% tr "Assistance" "Assistance" %}</p>
         <div class="preview-card">
-            <span class="badge">Contact direct</span>
-            <h2>Boite de reception integree</h2>
+            <span class="badge">{% tr "Contact direct" "Direct contact" %}</span>
+            <h2>{% tr "Boite de reception integree" "Integrated inbox" %}</h2>
             <p class="preview-copy">
-                L'administration recoit votre demande et peut vous repondre directement dans cet espace.
+                {% tr "L administration recoit votre demande et peut vous repondre directement dans cet espace." "The administration receives your request and can reply directly in this space." %}
             </p>
-            <div class="preview-seat">Les reponses de l'admin seront visibles ici des leur envoi.</div>
+            <div class="preview-seat">{% tr "Les reponses de l admin seront visibles ici des leur envoi." "Admin replies will appear here as soon as they are sent." %}</div>
         </div>
     </aside>
 </main>

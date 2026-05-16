@@ -1,13 +1,14 @@
 {% extends "base.html" %}
+{% load bilingual %}
 
-{% block title %}Invitation partagee{% endblock %}
+{% block title %}{% tr "Invitation partagee" "Shared invitation" %}{% endblock %}
 
 {% block content %}
 <main class="print-page">
     <article class="invitation-sheet invitation-{{ invitation.event_type }}">
         <div class="sheet-header">
             <div>
-                <p class="eyebrow">Invitation partagee</p>
+                <p class="eyebrow">{% tr "Invitation partagee" "Shared invitation" %}</p>
                 <h1>{{ invitation.event_label }}</h1>
             </div>
             <span class="badge">{{ invitation.guest_name }}</span>
@@ -15,11 +16,11 @@
         <div class="sheet-body">
             <section class="sheet-copy">
                 <p class="lead">{{ invitation.guest_name }}</p>
-                <p class="sheet-text">Votre place reservee est <strong>{{ invitation.seat_location }}</strong>.</p>
+                <p class="sheet-text">{% tr "Votre place reservee est" "Your reserved seat is" %} <strong>{{ invitation.seat_location }}</strong>.</p>
             </section>
             <aside class="qr-panel">
                 {% if invitation.qr_code %}
-                <img src="{{ invitation.qr_code.url }}" alt="QR code de l'invitation">
+                <img src="{{ invitation.qr_code.url }}" alt="{% tr 'QR code de l invitation' 'Invitation QR code' %}">
                 {% endif %}
             </aside>
         </div>

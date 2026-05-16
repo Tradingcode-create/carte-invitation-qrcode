@@ -7,8 +7,8 @@ from .models import Invitation, OrganizerProfile, PaymentTransaction, Subscripti
 
 @admin.register(OrganizerProfile)
 class OrganizerProfileAdmin(admin.ModelAdmin):
-    list_display = ("user", "ceremony_type", "planned_invitations", "phone_number", "created_at")
-    list_filter = ("ceremony_type", "created_at")
+    list_display = ("user", "ceremony_type", "preferred_language", "planned_invitations", "phone_number", "support_user_can_send", "last_seen_at", "created_at")
+    list_filter = ("ceremony_type", "preferred_language", "support_user_can_send", "created_at")
     search_fields = ("user__username", "user__email", "phone_number")
 
 

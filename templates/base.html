@@ -1,6 +1,6 @@
-{% load static %}
+{% load static bilingual %}
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ LANGUAGE_CODE|default:'fr' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,22 +19,30 @@
             </a>
             <nav class="nav-links">
                 {% if user.is_authenticated %}
-                <a href="{% url 'invitations:subscription' %}">Abonnement</a>
-                <a href="{% url 'invitations:list' %}">Invites</a>
-                <a href="{% url 'invitations:create' %}">Nouvelle invitation</a>
-                <a href="{% url 'invitations:contact-admin' %}">Contacter l'admin</a>
+                <a href="{% url 'invitations:subscription' %}">{% tr "Abonnement" "Subscription" %}</a>
+                <a href="{% url 'invitations:list' %}">{% tr "Invites" "Guests" %}</a>
+                <a href="{% url 'invitations:create' %}">{% tr "Nouvelle invitation" "New invitation" %}</a>
+                <a href="{% url 'invitations:contact-admin' %}">{% tr "Contacter l'admin" "Contact admin" %}</a>
                 {% if user.is_staff %}
-                <a href="{% url 'invitations:staff-report' %}">Rapport</a>
-                <a href="/admin/">Admin</a>
+                <a href="{% url 'invitations:staff-report' %}">{% tr "Rapport" "Report" %}</a>
+                <a href="/admin/">{% tr "Admin" "Admin" %}</a>
                 {% endif %}
                 <form method="post" action="{% url 'logout' %}">
                     {% csrf_token %}
-                    <button class="button button-secondary button-small" type="submit">Deconnexion</button>
+                    <button class="button button-secondary button-small" type="submit">{% tr "Deconnexion" "Log out" %}</button>
                 </form>
                 {% else %}
-                <a href="{% url 'invitations:signup' %}">Inscription</a>
-                <a href="{% url 'login' %}">Connexion</a>
+                <a href="{% url 'invitations:signup' %}">{% tr "Inscription" "Sign up" %}</a>
+                <a href="{% url 'login' %}">{% tr "Connexion" "Log in" %}</a>
                 {% endif %}
+                <form method="post" action="{% url 'invitations:set-language' %}" class="language-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                    <select class="form-control language-select" name="language" onchange="this.form.submit()">
+                        <option value="fr" {% if LANGUAGE_CODE|slice:":2" == "fr" %}selected{% endif %}>FR</option>
+                        <option value="en" {% if LANGUAGE_CODE|slice:":2" == "en" %}selected{% endif %}>EN</option>
+                    </select>
+                </form>
             </nav>
         </div>
     </header>
@@ -52,8 +60,53 @@
 
     <footer style="text-align:center; padding:20px; margin-top:50px;">
         <p>
-            Copyright 2025 - {% now "Y" %} <a href="https://carte-invitation-qrcode.onrender.com">Tcode</a> | RDC
+            {% tr "Copyright" "Copyright" %} 2025 - {% now "Y" %} <a href="https://carte-invitation-qrcode.onrender.com">Tcode</a> | RDC
         </p>
     </footer>
+
+    {% if user.is_authenticated %}
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        let previousUnread = null;
+
+        function playIncomingTone() {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContext) return;
+            const ctx = new AudioContext();
+            const oscillator = ctx.createOscillator();
+            const gain = ctx.createGain();
+            oscillator.type = "sine";
+            oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(660, ctx.currentTime + 0.22);
+            gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+            oscillator.connect(gain);
+            gain.connect(ctx.destination);
+            oscillator.start();
+            oscillator.stop(ctx.currentTime + 0.36);
+        }
+
+        async function pollNotifications() {
+            try {
+                const response = await fetch("{% url 'invitations:notifications-poll' %}", {
+                    headers: {"X-Requested-With": "XMLHttpRequest"}
+                });
+                if (!response.ok) return;
+                const data = await response.json();
+                if (previousUnread !== null && data.unread_count > previousUnread) {
+                    playIncomingTone();
+                }
+                previousUnread = data.unread_count;
+            } catch (error) {
+                // Silent fail for background polling.
+            }
+        }
+
+        pollNotifications();
+        setInterval(pollNotifications, 20000);
+    });
+    </script>
+    {% endif %}
 </body>
 </html>

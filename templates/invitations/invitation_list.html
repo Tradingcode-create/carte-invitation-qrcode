@@ -1,34 +1,34 @@
 {% extends "base.html" %}
+{% load bilingual %}
 
-{% block title %}Mes invites{% endblock %}
+{% block title %}{% tr "Mes invites" "My guests" %}{% endblock %}
 
 {% block content %}
 <main class="dashboard">
     <section class="listing-section">
         <div class="section-head">
             <div>
-                <p class="eyebrow">Gestion des invites</p>
-                <h1>Votre liste d'invitations</h1>
+                <p class="eyebrow">{% tr "Gestion des invites" "Guest management" %}</p>
+                <h1>{% tr "Votre liste d'invitations" "Your invitation list" %}</h1>
             </div>
             <div class="action-row">
                 <span class="badge">
                     {% if subscription.remaining_invitations == None %}
-                    Illimite
+                    {% tr "Illimite" "Unlimited" %}
                     {% else %}
-                    {{ subscription.remaining_invitations }} restantes
+                    {{ subscription.remaining_invitations }} {% tr "restantes" "remaining" %}
                     {% endif %}
                 </span>
-                <a class="button button-primary" href="{% url 'invitations:create' %}">Ajouter un invite</a>
+                <a class="button button-primary" href="{% url 'invitations:create' %}">{% tr "Ajouter un invite" "Add a guest" %}</a>
             </div>
         </div>
 
         <div class="import-panel">
             <div>
-                <p class="eyebrow">Import rapide</p>
-                <h2>Generer des invitations depuis Excel</h2>
+                <p class="eyebrow">{% tr "Import rapide" "Quick import" %}</p>
+                <h2>{% tr "Generer des invitations depuis Excel" "Generate invitations from Excel" %}</h2>
                 <p class="hero-text">
-                    Chargez un fichier `.xlsx` avec deux colonnes: le nom du couple ou de l'invite,
-                    puis son emplacement dans la salle.
+                    {% tr "Chargez un fichier .xlsx avec deux colonnes: le nom du couple ou de l'invite, puis son emplacement dans la salle." "Upload an .xlsx file with two columns: the guest or couple name, then the seat location." %}
                 </p>
             </div>
             <form method="post" action="{% url 'invitations:import-excel' %}" enctype="multipart/form-data" class="import-form">
@@ -41,8 +41,8 @@
                     {% endif %}
                 </div>
                 <div class="action-row">
-                    <button class="button button-primary" type="submit">Importer et generer</button>
-                    <a class="button button-secondary" href="{% url 'invitations:excel-template' %}">Telecharger le modele</a>
+                    <button class="button button-primary" type="submit">{% tr "Importer et generer" "Import and generate" %}</button>
+                    <a class="button button-secondary" href="{% url 'invitations:excel-template' %}">{% tr "Telecharger le modele" "Download template" %}</a>
                 </div>
             </form>
         </div>
@@ -52,23 +52,23 @@
             <article class="invite-card">
                 <span class="badge">{{ invitation.event_label }}</span>
                 <h3>{{ invitation.guest_name }}</h3>
-                <p>Place: {{ invitation.seat_location }}</p>
+                <p>{% tr "Place" "Seat" %}: {{ invitation.seat_location }}</p>
                 <dl>
                     <div>
-                        <dt>Etat</dt>
-                        <dd>{% if invitation.is_locked %}Verrouillee{% else %}Editable{% endif %}</dd>
+                        <dt>{% tr "Etat" "Status" %}</dt>
+                        <dd>{% if invitation.is_locked %}{% tr "Verrouillee" "Locked" %}{% else %}{% tr "Editable" "Editable" %}{% endif %}</dd>
                     </div>
                     <div>
                         <dt>QRCode</dt>
-                        <dd>{% if invitation.qr_code %}Pret{% else %}En attente{% endif %}</dd>
+                        <dd>{% if invitation.qr_code %}{% tr "Pret" "Ready" %}{% else %}{% tr "En attente" "Pending" %}{% endif %}</dd>
                     </div>
                 </dl>
-                <a class="text-link" href="{% url 'invitations:detail' invitation.slug %}">Voir le detail</a>
+                <a class="text-link" href="{% url 'invitations:detail' invitation.slug %}">{% tr "Voir le detail" "View details" %}</a>
             </article>
             {% empty %}
             <article class="empty-card">
-                <h3>Pas encore d'invites</h3>
-                <p>Ajoutez vos premiers noms et placements pour lancer la production.</p>
+                <h3>{% tr "Pas encore d'invites" "No guests yet" %}</h3>
+                <p>{% tr "Ajoutez vos premiers noms et placements pour lancer la production." "Add your first names and seats to start production." %}</p>
             </article>
             {% endfor %}
         </div>

@@ -14,29 +14,51 @@ from django.db import models
 from django.template.defaultfilters import slugify
 from django.utils import timezone
 
+from .localization import tr_text
+
 
 class OrganizerProfile(models.Model):
     MARIAGE = "mariage"
     ANNIVERSAIRE = "anniversaire"
     CONCERT = "concert"
+    LANG_FR = "fr"
+    LANG_EN = "en"
 
     EVENT_CHOICES = [
         (MARIAGE, "Mariage"),
         (ANNIVERSAIRE, "Anniversaire"),
         (CONCERT, "Concert"),
     ]
+    LANGUAGE_CHOICES = [
+        (LANG_FR, "Francais"),
+        (LANG_EN, "English"),
+    ]
 
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="organizer_profile")
     ceremony_type = models.CharField("Type de ceremonie", max_length=20, choices=EVENT_CHOICES)
     planned_invitations = models.PositiveIntegerField("Nombre d'invitations prevu", default=1)
     phone_number = models.CharField("Numero Mobile Money", max_length=30, blank=True)
+    preferred_language = models.CharField(max_length=5, choices=LANGUAGE_CHOICES, default=LANG_FR)
+    support_thread_subject = models.CharField(max_length=150, blank=True)
+    support_user_can_send = models.BooleanField(default=True)
+    last_seen_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.user.get_username()
 
     def get_event_label(self):
-        return dict(self.EVENT_CHOICES).get(self.ceremony_type, self.ceremony_type)
+        return self.get_event_label_for_language()
+
+    def get_event_label_for_language(self, language=None):
+        language = (language or self.preferred_language or "fr")[:2]
+        labels = {
+            self.MARIAGE: {"fr": "Mariage", "en": "Wedding"},
+            self.ANNIVERSAIRE: {"fr": "Anniversaire", "en": "Birthday"},
+            self.CONCERT: {"fr": "Concert", "en": "Concert"},
+        }
+        event_labels = labels.get(self.ceremony_type, {})
+        return event_labels.get(language) or event_labels.get("fr") or self.ceremony_type
 
     @property
     def active_subscription(self):
@@ -116,6 +138,33 @@ class Subscription(models.Model):
         used = self.organizer.invitations.count()
         return max(self.invitation_limit - used, 0)
 
+    @property
+    def plan_label(self):
+        return {
+            self.PLAN_STARTER: tr_text("1 a 199 invitations", "1 to 199 invitations"),
+            self.PLAN_PRO: tr_text("200 a 599 invitations", "200 to 599 invitations"),
+            self.PLAN_UNLIMITED: tr_text("Illimite", "Unlimited"),
+        }.get(self.plan_code, self.plan_code)
+
+    @property
+    def provider_label(self):
+        return {
+            self.PROVIDER_DEMO_CARD: tr_text("Carte demo (Visa)", "Demo card (Visa)"),
+            self.PROVIDER_AIRTEL: "Airtel Money",
+            self.PROVIDER_ORANGE: "Orange Money",
+            self.PROVIDER_AFRIMONEY: "AfriMoney",
+            self.PROVIDER_MPESA: "M-Pesa",
+        }.get(self.provider, self.provider)
+
+    @property
+    def status_label(self):
+        return {
+            self.STATUS_PENDING: tr_text("En attente", "Pending"),
+            self.STATUS_ACTIVE: tr_text("Actif", "Active"),
+            self.STATUS_EXPIRED: tr_text("Expire", "Expired"),
+            self.STATUS_CANCELLED: tr_text("Annule", "Cancelled"),
+        }.get(self.status, self.status)
+
 
 class PaymentTransaction(models.Model):
     STATUS_CREATED = "created"
@@ -160,6 +209,15 @@ class PaymentTransaction(models.Model):
         body = json.dumps(payload, sort_keys=True).encode("utf-8")
         return hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
 
+    @property
+    def status_label(self):
+        return {
+            self.STATUS_CREATED: tr_text("Cree", "Created"),
+            self.STATUS_PENDING: tr_text("En attente", "Pending"),
+            self.STATUS_SUCCEEDED: tr_text("Reussi", "Succeeded"),
+            self.STATUS_FAILED: tr_text("Echoue", "Failed"),
+        }.get(self.status, self.status)
+
 
 class SupportMessage(models.Model):
     SENDER_USER = "user"
@@ -192,6 +250,10 @@ class SupportMessage(models.Model):
         if self.sender_type == self.SENDER_ADMIN and not (self.sender_user and self.sender_user.is_staff):
             raise ValidationError("Un message admin doit etre envoye par un utilisateur staff.")
 
+    @property
+    def sender_label(self):
+        return tr_text("Administration", "Administration") if self.sender_type == self.SENDER_ADMIN else tr_text("Vous", "You")
+
 
 class Invitation(models.Model):
     organizer = models.ForeignKey(
@@ -222,7 +284,7 @@ class Invitation(models.Model):
 
     @property
     def event_label(self):
-        return self.organizer.get_event_label()
+        return self.organizer.get_event_label_for_language()
 
     @property
     def is_locked(self):

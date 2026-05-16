@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    ContactAdminReplyView,
     ContactAdminView,
     HomeView,
     InvitationCreateView,
@@ -14,13 +15,16 @@ from .views import (
     StaffReportExcelView,
     StaffReportView,
     StaffReplySupportView,
+    StaffToggleSupportView,
     SubscriptionDashboardView,
     download_excel_template,
     download_invitation_image,
+    notifications_poll,
     download_qrcode,
     mark_printed,
     mark_shared,
     payment_callback,
+    set_language_preference,
     start_payment,
 )
 
@@ -29,12 +33,16 @@ app_name = "invitations"
 
 urlpatterns = [
     path("", HomeView.as_view(), name="home"),
+    path("langue/", set_language_preference, name="set-language"),
     path("inscription/", SignUpView.as_view(), name="signup"),
     path("abonnement/", SubscriptionDashboardView.as_view(), name="subscription"),
     path("contact-admin/", ContactAdminView.as_view(), name="contact-admin"),
+    path("contact-admin/repondre/", ContactAdminReplyView.as_view(), name="contact-admin-reply"),
+    path("notifications/poll/", notifications_poll, name="notifications-poll"),
     path("staff/rapport/", StaffReportView.as_view(), name="staff-report"),
     path("staff/rapport/excel/", StaffReportExcelView.as_view(), name="staff-report-excel"),
     path("staff/rapport/repondre/<int:organizer_id>/", StaffReplySupportView.as_view(), name="staff-reply-support"),
+    path("staff/rapport/toggle-support/<int:organizer_id>/", StaffToggleSupportView.as_view(), name="staff-toggle-support"),
     path("paiement/demarrer/", start_payment, name="start-payment"),
     path("paiement/callback/<str:provider>/", payment_callback, name="payment-callback"),
     path("invites/", InvitationListView.as_view(), name="list"),

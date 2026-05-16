@@ -1,75 +1,76 @@
 {% extends "base.html" %}
+{% load bilingual %}
 
 {% block title %}Invitation {{ invitation.guest_name }}{% endblock %}
 
 {% block content %}
 <main class="print-page">
     <div class="toolbar no-print">
-        <a class="button button-secondary" href="{% url 'invitations:list' %}">Retour aux invites</a>
+        <a class="button button-secondary" href="{% url 'invitations:list' %}">{% tr "Retour aux invites" "Back to guests" %}</a>
         {% if can_edit %}
-        <a class="button button-secondary" href="{% url 'invitations:update' invitation.slug %}">Modifier</a>
+        <a class="button button-secondary" href="{% url 'invitations:update' invitation.slug %}">{% tr "Modifier" "Edit" %}</a>
         <form method="post" action="{% url 'invitations:delete' invitation.slug %}">
             {% csrf_token %}
-            <button class="button button-secondary" type="submit">Supprimer</button>
+            <button class="button button-secondary" type="submit">{% tr "Supprimer" "Delete" %}</button>
         </form>
         {% endif %}
         <form method="post" action="{% url 'invitations:print' invitation.slug %}">
             {% csrf_token %}
-            <button class="button button-primary" type="submit">Imprimer</button>
+            <button class="button button-primary" type="submit">{% tr "Imprimer" "Print" %}</button>
         </form>
         <form method="post" action="{% url 'invitations:share' invitation.slug %}">
             {% csrf_token %}
-            <button class="button button-secondary" type="submit">Partager sur WhatsApp</button>
+            <button class="button button-secondary" type="submit">{% tr "Partager sur WhatsApp" "Share on WhatsApp" %}</button>
         </form>
         {% if download_enabled %}
-        <a class="button button-secondary" href="{% url 'invitations:download-image' invitation.slug %}">Telecharger en JPEG</a>
-        <a class="button button-secondary" href="{% url 'invitations:download-qrcode' invitation.slug %}">Telecharger le QR code</a>
+        <a class="button button-secondary" href="{% url 'invitations:download-image' invitation.slug %}">{% tr "Telecharger en JPEG" "Download as JPEG" %}</a>
+        <a class="button button-secondary" href="{% url 'invitations:download-qrcode' invitation.slug %}">{% tr "Telecharger le QR code" "Download QR code" %}</a>
         {% endif %}
     </div>
 
     <article class="invitation-sheet invitation-{{ invitation.event_type }}">
         <div class="sheet-header">
             <div>
-                <p class="eyebrow">Invitation personnalisee</p>
+                <p class="eyebrow">{% tr "Invitation personnalisee" "Custom invitation" %}</p>
                 <h1>{{ invitation.event_label }}</h1>
             </div>
-            <span class="badge">{% if invitation.is_locked %}Verrouillee{% else %}Editable{% endif %}</span>
+            <span class="badge">{% if invitation.is_locked %}{% tr "Verrouillee" "Locked" %}{% else %}{% tr "Editable" "Editable" %}{% endif %}</span>
         </div>
 
         <div class="sheet-body">
             <section class="sheet-copy">
                 <p class="lead">{{ invitation.guest_name }}</p>
                 <p class="sheet-text">
-                    Vous etes cordialement invite a cette ceremonie. Votre place reservee est:
+                    {% tr "Vous etes cordialement invite a cette ceremonie. Votre place reservee est:" "You are warmly invited to this ceremony. Your reserved seat is:" %}
                     <strong>{{ invitation.seat_location }}</strong>.
                 </p>
                 <div class="meta-grid">
                     <div>
-                        <span>Type</span>
+                        <span>{% tr "Type" "Type" %}</span>
                         <strong>{{ invitation.event_label }}</strong>
                     </div>
                     <div>
-                        <span>Invite</span>
+                        <span>{% tr "Invite" "Guest" %}</span>
                         <strong>{{ invitation.guest_name }}</strong>
                     </div>
                     <div>
-                        <span>Place</span>
+                        <span>{% tr "Place" "Seat" %}</span>
                         <strong>{{ invitation.seat_location }}</strong>
                     </div>
                     <div>
-                        <span>Partage WhatsApp</span>
-                        <strong>{% if invitation.whatsapp_shared_at %}Oui{% else %}Non{% endif %}</strong>
+                        <span>{% tr "Partage WhatsApp" "WhatsApp share" %}</span>
+                        <strong>{% if invitation.whatsapp_shared_at %}{% tr "Oui" "Yes" %}{% else %}{% tr "Non" "No" %}{% endif %}</strong>
                     </div>
                 </div>
             </section>
 
             <aside class="qr-panel">
                 {% if invitation.qr_code %}
-                <img src="{{ invitation.qr_code.url }}" alt="QR code de l'invitation">
+                <img src="{{ invitation.qr_code.url }}" alt="{% tr 'QR code de l invitation' 'Invitation QR code' %}">
                 {% endif %}
-                <p>Le QR code est sauvegardable apres paiement confirme.</p>
+                <p>{% tr "Le QR code est sauvegardable apres paiement confirme." "The QR code can be saved after payment confirmation." %}</p>
                 {% if invitation.printed_at %}
-                <p>Imprimee le {{ invitation.printed_at|date:"d/m/Y H:i" }}</p>
+                <p>{% tr "Imprimee le" "Printed on" %} {{ invitation.printed_at|date:"d/m/Y H:i" }}</p>
                 {% endif %}
             </aside>
         </div>

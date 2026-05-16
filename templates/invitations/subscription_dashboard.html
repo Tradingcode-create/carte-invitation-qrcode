@@ -1,40 +1,40 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static bilingual %}
 
-{% block title %}Mon abonnement{% endblock %}
+{% block title %}{% tr "Mon abonnement" "My subscription" %}{% endblock %}
 
 {% block content %}
 <main class="form-layout">
     <section class="form-panel">
         <div class="section-head">
             <div>
-                <p class="eyebrow">Abonnement</p>
-                <h1>{{ subscription.get_plan_code_display }}</h1>
+                <p class="eyebrow">{% tr "Abonnement" "Subscription" %}</p>
+                <h1>{{ subscription.plan_label }}</h1>
             </div>
             <span class="badge">{{ subscription.price_usd }} USD</span>
         </div>
 
         <div class="meta-grid">
             <div>
-                <span>Ceremonie</span>
+                <span>{% tr "Ceremonie" "Ceremony" %}</span>
                 <strong>{{ profile.get_event_label }}</strong>
             </div>
             <div>
-                <span>Volume choisi</span>
+                <span>{% tr "Volume choisi" "Selected volume" %}</span>
                 <strong>{{ profile.planned_invitations }}</strong>
             </div>
             <div>
-                <span>Quota</span>
-                <strong>{% if subscription.invitation_limit %}{{ subscription.invitation_limit }}{% else %}Illimite{% endif %}</strong>
+                <span>{% tr "Quota" "Quota" %}</span>
+                <strong>{% if subscription.invitation_limit %}{{ subscription.invitation_limit }}{% else %}{% tr "Illimite" "Unlimited" %}{% endif %}</strong>
             </div>
             <div>
-                <span>Statut</span>
-                <strong>{% if subscription.is_paid %}Paye{% else %}En attente{% endif %}</strong>
+                <span>{% tr "Statut" "Status" %}</span>
+                <strong>{% if subscription.is_paid %}{% tr "Paye" "Paid" %}{% else %}{% tr "En attente" "Pending" %}{% endif %}</strong>
             </div>
             {% if active_subscription %}
             <div>
-                <span>Reliquat actuel</span>
-                <strong>{% if active_subscription.remaining_invitations == None %}Illimite{% else %}{{ active_subscription.remaining_invitations }} invitations{% endif %}</strong>
+                <span>{% tr "Reliquat actuel" "Current remaining quota" %}</span>
+                <strong>{% if active_subscription.remaining_invitations == None %}{% tr "Illimite" "Unlimited" %}{% else %}{{ active_subscription.remaining_invitations }} {% tr "invitations" "invitations" %}{% endif %}</strong>
             </div>
             {% endif %}
         </div>
@@ -42,15 +42,15 @@
         {% if subscription.is_paid and not show_payment_form %}
         <div class="import-panel">
             <div>
-                <p class="eyebrow">Abonnement actif</p>
-                <h2>Coordonnees de paiement masquees</h2>
+                <p class="eyebrow">{% tr "Abonnement actif" "Active subscription" %}</p>
+                <h2>{% tr "Coordonnees de paiement masquees" "Payment details hidden" %}</h2>
                 <p class="hero-text">
-                    Votre abonnement est actif. Les champs de paiement disparaissent apres validation pour garder cet espace simple.
+                    {% tr "Votre abonnement est actif. Les champs de paiement disparaissent apres validation pour garder cet espace simple." "Your subscription is active. Payment fields are hidden after validation to keep this area simple." %}
                 </p>
             </div>
             <div class="action-row">
-                <a class="button button-primary" href="{% url 'invitations:subscription' %}?renew=1">Renouveler ou upgrader</a>
-                <a class="button button-secondary" href="{% url 'invitations:list' %}">Voir mes invitations</a>
+                <a class="button button-primary" href="{% url 'invitations:subscription' %}?renew=1">{% tr "Renouveler ou upgrader" "Renew or upgrade" %}</a>
+                <a class="button button-secondary" href="{% url 'invitations:list' %}">{% tr "Voir mes invitations" "View my invitations" %}</a>
             </div>
         </div>
         {% else %}
@@ -79,7 +79,7 @@
                     <div class="error-list">{{ payment_form.phone_number.errors }}</div>
                     {% endif %}
                 </div>
-                <p class="field-help">Utilisez ce mode pour Airtel Money, Orange Money, AfriMoney ou M-Pesa.</p>
+                <p class="field-help">{% tr "Utilisez ce mode pour Airtel Money, Orange Money, AfriMoney ou M-Pesa." "Use this mode for Airtel Money, Orange Money, AfriMoney, or M-Pesa." %}</p>
             </div>
 
             <div id="demo-card-fields" class="payment-mode-group">
@@ -108,54 +108,54 @@
             {% endif %}
 
             <p id="demo-card-help" class="field-help">
-                Mode demo local: utilisez 4111 1111 1111 1111 ou 4242 4242 4242 4242.
+                {% tr "Mode demo local: utilisez 4111 1111 1111 1111 ou 4242 4242 4242 4242." "Local demo mode: use 4111 1111 1111 1111 or 4242 4242 4242 4242." %}
             </p>
             <p class="field-help">
-                Si vous avez deja un abonnement actif non epuise, son reliquat sera automatiquement ajoute au nouveau forfait apres validation du paiement.
+                {% tr "Si vous avez deja un abonnement actif non epuise, son reliquat sera automatiquement ajoute au nouveau forfait apres validation du paiement." "If you already have an active unused subscription, its remaining quota will be added automatically to the new plan after payment validation." %}
             </p>
-            <button class="button button-primary" type="submit">Initialiser le paiement securise</button>
+            <button class="button button-primary" type="submit">{% tr "Initialiser le paiement securise" "Start secure payment" %}</button>
         </form>
         {% endif %}
 
         {% if subscription.is_paid %}
         <div class="action-row">
-            <a class="button button-primary" href="{% url 'invitations:create' %}">Creer une invitation</a>
-            <a class="button button-secondary" href="{% url 'invitations:list' %}">Voir mes invites</a>
+            <a class="button button-primary" href="{% url 'invitations:create' %}">{% tr "Creer une invitation" "Create an invitation" %}</a>
+            <a class="button button-secondary" href="{% url 'invitations:list' %}">{% tr "Voir mes invites" "View my guests" %}</a>
         </div>
         {% endif %}
     </section>
 
     <aside class="preview-panel">
-        <p class="eyebrow">Paiement RDC</p>
+        <p class="eyebrow">{% tr "Paiement RDC" "DRC payment" %}</p>
         <div class="preview-card">
-            <span class="badge">Paiement</span>
-            <h2>Airtel, Orange, AfriMoney, M-Pesa ou carte demo</h2>
+            <span class="badge">{% tr "Paiement" "Payment" %}</span>
+            <h2>{% tr "Airtel, Orange, AfriMoney, M-Pesa ou carte demo" "Airtel, Orange, AfriMoney, M-Pesa, or demo card" %}</h2>
             <p class="preview-copy">
-                Le projet est pret pour les API securisees et supporte aussi le mode demo local.
+                {% tr "Le projet est pret pour les API securisees et supporte aussi le mode demo local." "The project is ready for secure APIs and also supports local demo mode." %}
             </p>
-            <div class="preview-seat">Base evolutive et renouvellement cumulatif du quota.</div>
+            <div class="preview-seat">{% tr "Base evolutive et renouvellement cumulatif du quota." "Scalable base with cumulative renewal of quota." %}</div>
         </div>
 
         <div class="payment-icons-grid">
             <article class="payment-icon-card">
                 <img class="payment-logo" src="{% static 'img/payments/visa.svg' %}" alt="Visa">
-                <div><strong>Carte demo Visa</strong><p>Mode local pour tests immediats.</p></div>
+                <div><strong>{% tr "Carte demo Visa" "Visa demo card" %}</strong><p>{% tr "Mode local pour tests immediats." "Local mode for instant tests." %}</p></div>
             </article>
             <article class="payment-icon-card">
                 <img class="payment-logo" src="{% static 'img/payments/airtel-money.svg' %}" alt="Airtel Money">
-                <div><strong>Airtel Money</strong><p>Paiement mobile rouge Airtel.</p></div>
+                <div><strong>Airtel Money</strong><p>{% tr "Paiement mobile rouge Airtel." "Airtel red mobile payment." %}</p></div>
             </article>
             <article class="payment-icon-card">
                 <img class="payment-logo" src="{% static 'img/payments/orange-money.svg' %}" alt="Orange Money">
-                <div><strong>Orange Money</strong><p>Paiement mobile Orange.</p></div>
+                <div><strong>Orange Money</strong><p>{% tr "Paiement mobile Orange." "Orange mobile payment." %}</p></div>
             </article>
             <article class="payment-icon-card">
                 <img class="payment-logo" src="{% static 'img/payments/afrimoney.svg' %}" alt="AfriMoney">
-                <div><strong>AfriMoney</strong><p>Mode portefeuille Africell.</p></div>
+                <div><strong>AfriMoney</strong><p>{% tr "Mode portefeuille Africell." "Africell wallet mode." %}</p></div>
             </article>
             <article class="payment-icon-card">
                 <img class="payment-logo" src="{% static 'img/payments/mpesa.svg' %}" alt="M-Pesa">
-                <div><strong>M-Pesa</strong><p>Portefeuille mobile M-Pesa.</p></div>
+                <div><strong>M-Pesa</strong><p>{% tr "Portefeuille mobile M-Pesa." "M-Pesa mobile wallet." %}</p></div>
             </article>
         </div>
     </aside>
@@ -165,23 +165,23 @@
 <section class="listing-section no-print">
     <div class="section-head">
         <div>
-            <p class="eyebrow">Transactions</p>
-            <h2>Historique de paiement</h2>
+            <p class="eyebrow">{% tr "Transactions" "Transactions" %}</p>
+            <h2>{% tr "Historique de paiement" "Payment history" %}</h2>
         </div>
     </div>
     <div class="card-grid">
         {% for payment in payments %}
         <article class="invite-card">
-            <span class="badge">{{ payment.get_status_display }}</span>
+            <span class="badge">{{ payment.status_label }}</span>
             <h3>{{ payment.amount_usd }} USD</h3>
-            <p>{{ payment.get_provider_display }}</p>
+            <p>{{ payment.subscription.provider_label }}</p>
             <dl>
                 <div>
-                    <dt>Reference</dt>
+                    <dt>{% tr "Reference" "Reference" %}</dt>
                     <dd>{{ payment.transaction_reference }}</dd>
                 </div>
                 <div>
-                    <dt>Date</dt>
+                    <dt>{% tr "Date" "Date" %}</dt>
                     <dd>{{ payment.created_at|date:"d/m/Y H:i" }}</dd>
                 </div>
             </dl>

@@ -31,11 +31,13 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "invitations.middleware.SessionActivityMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -79,13 +81,18 @@ else:
     }
 
 SESSION_ENGINE = "django.contrib.sessions.backends.db"
-SESSION_COOKIE_AGE = 60 * 60 * 24 * 14
+SESSION_COOKIE_AGE = 60 * 30
+SESSION_IDLE_TIMEOUT = 60 * 30
 SESSION_SAVE_EVERY_REQUEST = False
 
 
 AUTH_PASSWORD_VALIDATORS = []
 
 LANGUAGE_CODE = "fr-fr"
+LANGUAGES = [
+    ("fr", "Francais"),
+    ("en", "English"),
+]
 TIME_ZONE = "Europe/Paris"
 USE_I18N = True
 USE_TZ = True

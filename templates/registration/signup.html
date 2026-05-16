@@ -1,14 +1,15 @@
 {% extends "base.html" %}
+{% load bilingual %}
 
-{% block title %}Inscription{% endblock %}
+{% block title %}{% tr "Inscription" "Sign up" %}{% endblock %}
 
 {% block content %}
 <main class="form-layout">
     <section class="form-panel">
         <div class="section-head">
             <div>
-                <p class="eyebrow">Inscription</p>
-                <h1>Creer un compte organisateur</h1>
+                <p class="eyebrow">{% tr "Inscription" "Sign up" %}</p>
+                <h1>{% tr "Creer un compte organisateur" "Create an organizer account" %}</h1>
             </div>
         </div>
         <form method="post" class="invitation-form">
@@ -25,19 +26,19 @@
                 {% endif %}
             </div>
             {% endfor %}
-            <button class="button button-primary" type="submit">Creer mon compte</button>
+            <button class="button button-primary" type="submit">{% tr "Creer mon compte" "Create my account" %}</button>
         </form>
     </section>
 
     <aside class="preview-panel">
-        <p class="eyebrow">Tarification</p>
+        <p class="eyebrow">{% tr "Tarification" "Pricing" %}</p>
         <div class="preview-card">
-            <span class="badge">Plans disponibles</span>
-            <h2>3 categories d'abonnement</h2>
+            <span class="badge">{% tr "Plans disponibles" "Available plans" %}</span>
+            <h2>{% tr "3 categories d'abonnement" "3 subscription categories" %}</h2>
             <p class="preview-copy">
-                1 a 199 invitations: 79,9 USD. 200 a 599: 239,9 USD. Illimite: 999,9 USD.
+                {% tr "1 a 199 invitations: 79,9 USD. 200 a 599: 239,9 USD. Illimite: 999,9 USD." "1 to 199 invitations: 79.9 USD. 200 to 599: 239.9 USD. Unlimited: 999.9 USD." %}
             </p>
-            <div class="preview-seat">Le choix du volume determine automatiquement la formule. Pour les tests, vous pouvez ensuite payer avec la carte demo Visa.</div>
+            <div class="preview-seat">{% tr "Le choix du volume determine automatiquement la formule. Pour les tests, vous pouvez ensuite payer avec la carte demo Visa." "The selected volume automatically determines the plan. For testing, you can then pay with the Visa demo card." %}</div>
         </div>
     </aside>
 </main>

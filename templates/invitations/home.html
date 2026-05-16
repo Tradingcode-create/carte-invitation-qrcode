@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load bilingual %}
 
 {% block title %}Invitation QR Studio{% endblock %}
 
@@ -7,33 +8,32 @@
     {% if user.is_authenticated and profile %}
     <section class="hero-card">
         <div class="hero-copy">
-            <p class="eyebrow">Tableau de bord</p>
-            <h1>Vos invitations {{ profile.get_event_label|lower }} sont sous controle.</h1>
+            <p class="eyebrow">{% tr "Tableau de bord" "Dashboard" %}</p>
+            <h1>{% tr "Vos invitations" "Your" %} {{ profile.get_event_label|lower }} {% tr "sont sous controle." "invitations are under control." %}</h1>
             <p class="hero-text">
-                Votre formule active pilote le quota, le paiement, le telechargement du QR code
-                et le verrouillage apres impression ou partage WhatsApp.
+                {% tr "Votre formule active pilote le quota, le paiement, le telechargement du QR code et le verrouillage apres impression ou partage WhatsApp." "Your active plan controls quota, payment, QR code download, and locking after printing or WhatsApp sharing." %}
             </p>
             <div class="action-row">
-                <a class="button button-primary" href="{% url 'invitations:create' %}">Creer une invitation</a>
-                <a class="button button-secondary" href="{% url 'invitations:subscription' %}">Voir mon abonnement</a>
+                <a class="button button-primary" href="{% url 'invitations:create' %}">{% tr "Creer une invitation" "Create an invitation" %}</a>
+                <a class="button button-secondary" href="{% url 'invitations:subscription' %}">{% tr "Voir mon abonnement" "View my subscription" %}</a>
             </div>
         </div>
         <div class="hero-stats">
             <article class="stat-card">
-                <span>Total invitations</span>
+                <span>{% tr "Total invitations" "Total invitations" %}</span>
                 <strong>{{ stats.total }}</strong>
             </article>
             <article class="stat-card">
-                <span>Deja imprimees</span>
+                <span>{% tr "Deja imprimees" "Already printed" %}</span>
                 <strong>{{ stats.printed }}</strong>
             </article>
             <article class="stat-card">
-                <span>Partagees WhatsApp</span>
+                <span>{% tr "Partagees WhatsApp" "Shared on WhatsApp" %}</span>
                 <strong>{{ stats.shared }}</strong>
             </article>
             <article class="stat-card">
-                <span>Quota restant</span>
-                <strong>{% if stats.remaining == None %}Illimite{% else %}{{ stats.remaining }}{% endif %}</strong>
+                <span>{% tr "Quota restant" "Remaining quota" %}</span>
+                <strong>{% if stats.remaining == None %}{% tr "Illimite" "Unlimited" %}{% else %}{{ stats.remaining }}{% endif %}</strong>
             </article>
         </div>
     </section>
@@ -41,8 +41,8 @@
     <section class="listing-section">
         <div class="section-head">
             <div>
-                <p class="eyebrow">Abonnement</p>
-                <h2>{{ subscription.get_plan_code_display }}</h2>
+                <p class="eyebrow">{% tr "Abonnement" "Subscription" %}</p>
+                <h2>{{ subscription.plan_label }}</h2>
             </div>
             <span class="badge">{{ subscription.price_usd }} USD</span>
         </div>
@@ -52,24 +52,24 @@
             <article class="invite-card">
                 <span class="badge">{{ invitation.event_label }}</span>
                 <h3>{{ invitation.guest_name }}</h3>
-                <p>Place: {{ invitation.seat_location }}</p>
+                <p>{% tr "Place" "Seat" %}: {{ invitation.seat_location }}</p>
                 <dl>
                     <div>
-                        <dt>Statut</dt>
-                        <dd>{% if invitation.is_locked %}Verrouillee{% else %}Editable{% endif %}</dd>
+                        <dt>{% tr "Statut" "Status" %}</dt>
+                        <dd>{% if invitation.is_locked %}{% tr "Verrouillee" "Locked" %}{% else %}{% tr "Editable" "Editable" %}{% endif %}</dd>
                     </div>
                     <div>
-                        <dt>Creee</dt>
+                        <dt>{% tr "Creee" "Created" %}</dt>
                         <dd>{{ invitation.created_at|date:"d/m/Y H:i" }}</dd>
                     </div>
                 </dl>
-                <a class="text-link" href="{% url 'invitations:detail' invitation.slug %}">Ouvrir l'invitation</a>
+                <a class="text-link" href="{% url 'invitations:detail' invitation.slug %}">{% tr "Ouvrir l'invitation" "Open invitation" %}</a>
             </article>
             {% empty %}
             <article class="empty-card">
-                <h3>Aucun invite pour le moment</h3>
-                <p>Votre abonnement est pret. Creez votre premiere invitation a partir du nom et de la place.</p>
-                <a class="button button-primary" href="{% url 'invitations:create' %}">Commencer</a>
+                <h3>{% tr "Aucun invite pour le moment" "No guests yet" %}</h3>
+                <p>{% tr "Votre abonnement est pret. Creez votre premiere invitation a partir du nom et de la place." "Your subscription is ready. Create your first invitation with a name and seat." %}</p>
+                <a class="button button-primary" href="{% url 'invitations:create' %}">{% tr "Commencer" "Get started" %}</a>
             </article>
             {% endfor %}
         </div>
@@ -78,14 +78,13 @@
     <section class="hero-card">
         <div class="hero-copy">
             <p class="eyebrow">RDC Friendly</p>
-            <h1>Invitations elegantes, QR code telechargeable et paiement Mobile Money.</h1>
+            <h1>{% tr "Invitations elegantes, QR code telechargeable et paiement Mobile Money." "Elegant invitations, downloadable QR codes, and Mobile Money payments." %}</h1>
             <p class="hero-text">
-                Chaque organisateur cree son compte, choisit sa ceremonie, son volume d'invitations,
-                puis active son abonnement via Airtel Money, Orange Money, AfriMoney ou M-Pesa.
+                {% tr "Chaque organisateur cree son compte, choisit sa ceremonie, son volume d'invitations, puis active son abonnement via Airtel Money, Orange Money, AfriMoney ou M-Pesa." "Each organizer creates an account, chooses a ceremony, selects an invitation volume, then activates a subscription with Airtel Money, Orange Money, AfriMoney, or M-Pesa." %}
             </p>
             <div class="action-row">
-                <a class="button button-primary" href="{% url 'invitations:signup' %}">Creer mon compte</a>
-                <a class="button button-secondary" href="{% url 'login' %}">Me connecter</a>
+                <a class="button button-primary" href="{% url 'invitations:signup' %}">{% tr "Creer mon compte" "Create my account" %}</a>
+                <a class="button button-secondary" href="{% url 'login' %}">{% tr "Me connecter" "Log in" %}</a>
             </div>
         </div>
         <div class="hero-stats">

@@ -1,16 +1,17 @@
 {% extends "base.html" %}
+{% load bilingual %}
 
-{% block title %}Invitation{% endblock %}
+{% block title %}{% tr "Invitation" "Invitation" %}{% endblock %}
 
 {% block content %}
 <main class="form-layout">
     <section class="form-panel">
         <div class="section-head">
             <div>
-                <p class="eyebrow">{% if form.instance.pk %}Modification{% else %}Creation{% endif %}</p>
-                <h1>{% if form.instance.pk %}Modifier un invite{% else %}Ajouter un invite{% endif %}</h1>
+                <p class="eyebrow">{% if form.instance.pk %}{% tr "Modification" "Edit" %}{% else %}{% tr "Creation" "Create" %}{% endif %}</p>
+                <h1>{% if form.instance.pk %}{% tr "Modifier un invite" "Edit a guest" %}{% else %}{% tr "Ajouter un invite" "Add a guest" %}{% endif %}</h1>
             </div>
-            <a class="button button-secondary" href="{% url 'invitations:list' %}">Retour a la liste</a>
+            <a class="button button-secondary" href="{% url 'invitations:list' %}">{% tr "Retour a la liste" "Back to list" %}</a>
         </div>
 
         <form method="post" class="invitation-form">
@@ -25,21 +26,20 @@
             </div>
             {% endfor %}
             <button class="button button-primary" type="submit">
-                {% if form.instance.pk %}Enregistrer les modifications{% else %}Generer l'invitation{% endif %}
+                {% if form.instance.pk %}{% tr "Enregistrer les modifications" "Save changes" %}{% else %}{% tr "Generer l'invitation" "Generate invitation" %}{% endif %}
             </button>
         </form>
     </section>
 
     <aside class="preview-panel">
-        <p class="eyebrow">Regle metier</p>
+        <p class="eyebrow">{% tr "Regle metier" "Business rule" %}</p>
         <div class="preview-card">
-            <span class="badge">Edition minimale</span>
-            <h2>Nom + place uniquement</h2>
+            <span class="badge">{% tr "Edition minimale" "Minimal editing" %}</span>
+            <h2>{% tr "Nom + place uniquement" "Name + seat only" %}</h2>
             <p class="preview-copy">
-                Le type de ceremonie vient de votre abonnement. Une fois l'invitation imprimee
-                ou partagee via WhatsApp, elle devient automatiquement non modifiable.
+                {% tr "Le type de ceremonie vient de votre abonnement. Une fois l'invitation imprimee ou partagee via WhatsApp, elle devient automatiquement non modifiable." "The ceremony type comes from your subscription. Once printed or shared on WhatsApp, the invitation becomes automatically locked." %}
             </p>
-            <div class="preview-seat">QR code telechargeable seulement apres paiement valide.</div>
+            <div class="preview-seat">{% tr "QR code telechargeable seulement apres paiement valide." "QR code downloadable only after successful payment." %}</div>
         </div>
     </aside>
 </main>

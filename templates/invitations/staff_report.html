@@ -1,56 +1,54 @@
 {% extends "base.html" %}
+{% load bilingual %}
 
-{% block title %}Rapport admin{% endblock %}
+{% block title %}{% tr "Rapport admin" "Admin report" %}{% endblock %}
 
 {% block content %}
 <main class="dashboard">
     <section class="hero-card">
         <div class="hero-copy">
-            <p class="eyebrow">Administration</p>
-            <h1>Rapport global des utilisateurs et abonnements.</h1>
+            <p class="eyebrow">{% tr "Administration" "Administration" %}</p>
+            <h1>{% tr "Rapport global des utilisateurs et abonnements." "Global report for users and subscriptions." %}</h1>
             <p class="hero-text">
-                Cette vue complete le panneau Django Admin. Vous pouvez imprimer, exporter et suivre les statistiques en direct.
+                {% tr "Cette vue complete le panneau Django Admin. Vous pouvez imprimer, exporter et suivre les statistiques en direct." "This view complements the Django Admin panel. You can print, export, and track live statistics." %}
             </p>
             <div class="action-row no-print">
-                <button class="button button-primary" onclick="window.print()">Imprimer le rapport</button>
-                <a class="button button-secondary" href="{% url 'invitations:staff-report-excel' %}">Exporter Excel</a>
-                <a class="button button-secondary" href="/admin/auth/user/">Utilisateurs</a>
-                <a class="button button-secondary" href="/admin/invitations/subscription/">Abonnements</a>
-                <a class="button button-secondary" href="/admin/auth/user/add/">Ajouter un utilisateur</a>
+                <button class="button button-primary" onclick="window.print()">{% tr "Imprimer le rapport" "Print report" %}</button>
+                <a class="button button-secondary" href="{% url 'invitations:staff-report-excel' %}">{% tr "Exporter Excel" "Export Excel" %}</a>
+                <a class="button button-secondary" href="/admin/auth/user/">{% tr "Utilisateurs" "Users" %}</a>
+                <a class="button button-secondary" href="/admin/invitations/subscription/">{% tr "Abonnements" "Subscriptions" %}</a>
+                <a class="button button-secondary" href="/admin/auth/user/add/">{% tr "Ajouter un utilisateur" "Add a user" %}</a>
             </div>
         </div>
         <div class="hero-stats">
-            <article class="stat-card"><span>Utilisateurs</span><strong>{{ totals.users }}</strong></article>
-            <article class="stat-card"><span>Organisateurs</span><strong>{{ totals.organizers }}</strong></article>
-            <article class="stat-card"><span>Abonnements</span><strong>{{ totals.subscriptions }}</strong></article>
-            <article class="stat-card"><span>Abonnements payes</span><strong>{{ totals.paid_subscriptions }}</strong></article>
+            <article class="stat-card"><span>{% tr "Utilisateurs" "Users" %}</span><strong>{{ totals.users }}</strong></article>
+            <article class="stat-card"><span>{% tr "Organisateurs" "Organizers" %}</span><strong>{{ totals.organizers }}</strong></article>
+            <article class="stat-card"><span>{% tr "Abonnements" "Subscriptions" %}</span><strong>{{ totals.subscriptions }}</strong></article>
+            <article class="stat-card"><span>{% tr "Revenus du mois" "Monthly revenue" %}</span><strong>{{ totals.revenue_month }} USD</strong></article>
         </div>
     </section>
 
     <section class="listing-section no-print">
         <div class="section-head">
             <div>
-                <p class="eyebrow">Statistiques</p>
-                <h2>Graphes de pilotage</h2>
+                <p class="eyebrow">{% tr "Statistiques" "Statistics" %}</p>
+                <h2>{% tr "Graphes de pilotage" "Management charts" %}</h2>
             </div>
         </div>
         <div class="charts-grid">
-            <article class="chart-card">
-                <h3>Organisateurs par ceremonie</h3>
-                <canvas id="ceremony-chart" height="220"></canvas>
-            </article>
-            <article class="chart-card">
-                <h3>Abonnements par formule</h3>
-                <canvas id="plans-chart" height="220"></canvas>
-            </article>
+            <article class="chart-card"><h3>{% tr "Organisateurs par ceremonie" "Organizers by ceremony" %}</h3><canvas id="ceremony-chart" height="220"></canvas></article>
+            <article class="chart-card"><h3>{% tr "Abonnements par formule" "Subscriptions by plan" %}</h3><canvas id="plans-chart" height="220"></canvas></article>
+            <article class="chart-card"><h3>{% tr "Invitations commandees vs utilisees" "Ordered vs used invitations" %}</h3><canvas id="usage-chart" height="220"></canvas></article>
+            <article class="chart-card"><h3>{% tr "Utilisateurs actifs vs non actifs" "Active vs inactive users" %}</h3><canvas id="activity-chart" height="220"></canvas></article>
+            <article class="chart-card"><h3>{% tr "Revenus d abonnement du mois" "Monthly subscription revenue" %}</h3><canvas id="revenue-chart" height="220"></canvas></article>
         </div>
     </section>
 
     <section class="listing-section">
         <div class="section-head">
             <div>
-                <p class="eyebrow">Utilisateurs</p>
-                <h2>Profils organisateurs</h2>
+                <p class="eyebrow">{% tr "Utilisateurs" "Users" %}</p>
+                <h2>{% tr "Profils organisateurs" "Organizer profiles" %}</h2>
             </div>
         </div>
         <div class="card-grid">
@@ -58,10 +56,10 @@
             <article class="invite-card">
                 <span class="badge">{{ profile.get_event_label }}</span>
                 <h3>{{ profile.user.get_full_name|default:profile.user.username }}</h3>
-                <p>{{ profile.user.email|default:"Email non renseigne" }}</p>
+                <p>{{ profile.user.email|default:"-" }}</p>
                 <dl>
-                    <div><dt>Telephone</dt><dd>{{ profile.phone_number|default:"-" }}</dd></div>
-                    <div><dt>Invitations prevues</dt><dd>{{ profile.planned_invitations }}</dd></div>
+                    <div><dt>{% tr "Telephone" "Phone" %}</dt><dd>{{ profile.phone_number|default:"-" }}</dd></div>
+                    <div><dt>{% tr "Invitations prevues" "Planned invitations" %}</dt><dd>{{ profile.planned_invitations }}</dd></div>
                 </dl>
             </article>
             {% endfor %}
@@ -71,19 +69,19 @@
     <section class="listing-section">
         <div class="section-head">
             <div>
-                <p class="eyebrow">Abonnements</p>
-                <h2>Toutes les souscriptions</h2>
+                <p class="eyebrow">{% tr "Abonnements" "Subscriptions" %}</p>
+                <h2>{% tr "Toutes les souscriptions" "All subscriptions" %}</h2>
             </div>
         </div>
         <div class="card-grid">
             {% for subscription in subscriptions %}
             <article class="invite-card">
-                <span class="badge">{{ subscription.get_provider_display }}</span>
+                <span class="badge">{{ subscription.provider_label }}</span>
                 <h3>{{ subscription.organizer.user.username }}</h3>
-                <p>{{ subscription.get_plan_code_display }} - {{ subscription.price_usd }} USD</p>
+                <p>{{ subscription.plan_label }} - {{ subscription.price_usd }} USD</p>
                 <dl>
-                    <div><dt>Statut</dt><dd>{% if subscription.is_paid %}Paye{% else %}En attente{% endif %}</dd></div>
-                    <div><dt>Quota</dt><dd>{% if subscription.invitation_limit %}{{ subscription.invitation_limit }}{% else %}Illimite{% endif %}</dd></div>
+                    <div><dt>{% tr "Statut" "Status" %}</dt><dd>{{ subscription.status_label }}</dd></div>
+                    <div><dt>{% tr "Quota" "Quota" %}</dt><dd>{% if subscription.invitation_limit %}{{ subscription.invitation_limit }}{% else %}{% tr "Illimite" "Unlimited" %}{% endif %}</dd></div>
                 </dl>
             </article>
             {% endfor %}
@@ -93,8 +91,8 @@
     <section class="listing-section no-print">
         <div class="section-head">
             <div>
-                <p class="eyebrow">Support</p>
-                <h2>Messages utilisateurs</h2>
+                <p class="eyebrow">{% tr "Support" "Support" %}</p>
+                <h2>{% tr "Messages utilisateurs" "User messages" %}</h2>
             </div>
         </div>
         <div class="card-grid">
@@ -104,24 +102,30 @@
                 <h3>{{ support_message.subject }}</h3>
                 <p>{{ support_message.message }}</p>
                 <dl>
-                    <div><dt>Expediteur</dt><dd>{{ support_message.get_sender_type_display }}</dd></div>
-                    <div><dt>Date</dt><dd>{{ support_message.created_at|date:"d/m/Y H:i" }}</dd></div>
+                    <div><dt>{% tr "Expediteur" "Sender" %}</dt><dd>{{ support_message.sender_label }}</dd></div>
+                    <div><dt>{% tr "Date" "Date" %}</dt><dd>{{ support_message.created_at|date:"d/m/Y H:i" }}</dd></div>
                 </dl>
                 <form method="post" action="{% url 'invitations:staff-reply-support' support_message.organizer_id %}" class="invitation-form">
                     {% csrf_token %}
                     <div class="field-group">
-                        <input class="form-control" type="text" name="subject" value="Re: {{ support_message.subject }}" placeholder="Sujet de la reponse">
+                        <input class="form-control" type="text" name="subject" value="Re: {{ support_message.subject }}" placeholder="{% tr 'Sujet de la reponse' 'Reply subject' %}">
                     </div>
                     <div class="field-group">
-                        <textarea class="form-control" name="message" rows="4" placeholder="Votre reponse a l'utilisateur"></textarea>
+                        <textarea class="form-control" name="message" rows="4" placeholder="{% tr 'Votre reponse a l utilisateur' 'Your reply to the user' %}"></textarea>
                     </div>
-                    <button class="button button-secondary" type="submit">Repondre</button>
+                    <button class="button button-secondary" type="submit">{% tr "Repondre" "Reply" %}</button>
+                </form>
+                <form method="post" action="{% url 'invitations:staff-toggle-support' support_message.organizer_id %}">
+                    {% csrf_token %}
+                    <button class="button button-secondary" type="submit">
+                        {% if support_message.organizer.support_user_can_send %}{% tr "Bloquer l envoi user" "Block user sending" %}{% else %}{% tr "Reautoriser l envoi user" "Re-enable user sending" %}{% endif %}
+                    </button>
                 </form>
             </article>
             {% empty %}
             <article class="empty-card">
-                <h3>Aucun message pour le moment</h3>
-                <p>Les nouveaux messages des utilisateurs apparaitront ici.</p>
+                <h3>{% tr "Aucun message pour le moment" "No messages yet" %}</h3>
+                <p>{% tr "Les nouveaux messages des utilisateurs apparaitront ici." "New user messages will appear here." %}</p>
             </article>
             {% endfor %}
         </div>
@@ -130,6 +134,9 @@
 
 {{ chart_data.ceremonies|json_script:"ceremony-data" }}
 {{ chart_data.plans|json_script:"plans-data" }}
+{{ chart_data.usage|json_script:"usage-data" }}
+{{ chart_data.activity|json_script:"activity-data" }}
+{{ chart_data.revenue|json_script:"revenue-data" }}
 <script>
 function renderBarChart(canvasId, dataId, labelKey, valueKey, color) {
     const canvas = document.getElementById(canvasId);
@@ -144,7 +151,7 @@ function renderBarChart(canvasId, dataId, labelKey, valueKey, color) {
     if (!entries.length) {
         ctx.fillStyle = "#6e6258";
         ctx.font = "16px Arial";
-        ctx.fillText("Aucune donnee", 20, 40);
+        ctx.fillText("{% tr 'Aucune donnee' 'No data' %}", 20, 40);
         return;
     }
 
@@ -168,6 +175,9 @@ function renderBarChart(canvasId, dataId, labelKey, valueKey, color) {
 document.addEventListener("DOMContentLoaded", function () {
     renderBarChart("ceremony-chart", "ceremony-data", "ceremony_type", "total", "#0f5d5e");
     renderBarChart("plans-chart", "plans-data", "plan_code", "total", "#c67d2d");
+    renderBarChart("usage-chart", "usage-data", "label", "total", "#314d7d");
+    renderBarChart("activity-chart", "activity-data", "label", "total", "#1f6f43");
+    renderBarChart("revenue-chart", "revenue-data", "label", "total", "#9a6027");
 });
 </script>
 {% endblock %}
