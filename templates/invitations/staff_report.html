@@ -9,8 +9,7 @@
             <p class="eyebrow">Administration</p>
             <h1>Rapport global des utilisateurs et abonnements.</h1>
             <p class="hero-text">
-                Cette vue complete le panneau Django Admin. Vous pouvez imprimer ce rapport
-                ou ouvrir directement les ecrans d'administration des utilisateurs, profils et abonnements.
+                Cette vue complete le panneau Django Admin. Vous pouvez imprimer, exporter et suivre les statistiques en direct.
             </p>
             <div class="action-row no-print">
                 <button class="button button-primary" onclick="window.print()">Imprimer le rapport</button>
@@ -21,21 +20,28 @@
             </div>
         </div>
         <div class="hero-stats">
-            <article class="stat-card">
-                <span>Utilisateurs</span>
-                <strong>{{ totals.users }}</strong>
+            <article class="stat-card"><span>Utilisateurs</span><strong>{{ totals.users }}</strong></article>
+            <article class="stat-card"><span>Organisateurs</span><strong>{{ totals.organizers }}</strong></article>
+            <article class="stat-card"><span>Abonnements</span><strong>{{ totals.subscriptions }}</strong></article>
+            <article class="stat-card"><span>Abonnements payes</span><strong>{{ totals.paid_subscriptions }}</strong></article>
+        </div>
+    </section>
+
+    <section class="listing-section no-print">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow">Statistiques</p>
+                <h2>Graphes de pilotage</h2>
+            </div>
+        </div>
+        <div class="charts-grid">
+            <article class="chart-card">
+                <h3>Organisateurs par ceremonie</h3>
+                <canvas id="ceremony-chart" height="220"></canvas>
             </article>
-            <article class="stat-card">
-                <span>Organisateurs</span>
-                <strong>{{ totals.organizers }}</strong>
-            </article>
-            <article class="stat-card">
-                <span>Abonnements</span>
-                <strong>{{ totals.subscriptions }}</strong>
-            </article>
-            <article class="stat-card">
-                <span>Abonnements payes</span>
-                <strong>{{ totals.paid_subscriptions }}</strong>
+            <article class="chart-card">
+                <h3>Abonnements par formule</h3>
+                <canvas id="plans-chart" height="220"></canvas>
             </article>
         </div>
     </section>
@@ -54,14 +60,8 @@
                 <h3>{{ profile.user.get_full_name|default:profile.user.username }}</h3>
                 <p>{{ profile.user.email|default:"Email non renseigne" }}</p>
                 <dl>
-                    <div>
-                        <dt>Telephone</dt>
-                        <dd>{{ profile.phone_number|default:"-" }}</dd>
-                    </div>
-                    <div>
-                        <dt>Invitations prevues</dt>
-                        <dd>{{ profile.planned_invitations }}</dd>
-                    </div>
+                    <div><dt>Telephone</dt><dd>{{ profile.phone_number|default:"-" }}</dd></div>
+                    <div><dt>Invitations prevues</dt><dd>{{ profile.planned_invitations }}</dd></div>
                 </dl>
             </article>
             {% endfor %}
@@ -82,18 +82,92 @@
                 <h3>{{ subscription.organizer.user.username }}</h3>
                 <p>{{ subscription.get_plan_code_display }} - {{ subscription.price_usd }} USD</p>
                 <dl>
-                    <div>
-                        <dt>Statut</dt>
-                        <dd>{% if subscription.is_paid %}Paye{% else %}En attente{% endif %}</dd>
-                    </div>
-                    <div>
-                        <dt>Quota</dt>
-                        <dd>{% if subscription.invitation_limit %}{{ subscription.invitation_limit }}{% else %}Illimite{% endif %}</dd>
-                    </div>
+                    <div><dt>Statut</dt><dd>{% if subscription.is_paid %}Paye{% else %}En attente{% endif %}</dd></div>
+                    <div><dt>Quota</dt><dd>{% if subscription.invitation_limit %}{{ subscription.invitation_limit }}{% else %}Illimite{% endif %}</dd></div>
                 </dl>
             </article>
             {% endfor %}
         </div>
     </section>
+
+    <section class="listing-section no-print">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow">Support</p>
+                <h2>Messages utilisateurs</h2>
+            </div>
+        </div>
+        <div class="card-grid">
+            {% for support_message in support_messages %}
+            <article class="invite-card">
+                <span class="badge">{{ support_message.organizer.user.username }}</span>
+                <h3>{{ support_message.subject }}</h3>
+                <p>{{ support_message.message }}</p>
+                <dl>
+                    <div><dt>Expediteur</dt><dd>{{ support_message.get_sender_type_display }}</dd></div>
+                    <div><dt>Date</dt><dd>{{ support_message.created_at|date:"d/m/Y H:i" }}</dd></div>
+                </dl>
+                <form method="post" action="{% url 'invitations:staff-reply-support' support_message.organizer_id %}" class="invitation-form">
+                    {% csrf_token %}
+                    <div class="field-group">
+                        <input class="form-control" type="text" name="subject" value="Re: {{ support_message.subject }}" placeholder="Sujet de la reponse">
+                    </div>
+                    <div class="field-group">
+                        <textarea class="form-control" name="message" rows="4" placeholder="Votre reponse a l'utilisateur"></textarea>
+                    </div>
+                    <button class="button button-secondary" type="submit">Repondre</button>
+                </form>
+            </article>
+            {% empty %}
+            <article class="empty-card">
+                <h3>Aucun message pour le moment</h3>
+                <p>Les nouveaux messages des utilisateurs apparaitront ici.</p>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
 </main>
+
+{{ chart_data.ceremonies|json_script:"ceremony-data" }}
+{{ chart_data.plans|json_script:"plans-data" }}
+<script>
+function renderBarChart(canvasId, dataId, labelKey, valueKey, color) {
+    const canvas = document.getElementById(canvasId);
+    const source = document.getElementById(dataId);
+    if (!canvas || !source) return;
+    const entries = JSON.parse(source.textContent || "[]");
+    const ctx = canvas.getContext("2d");
+    const width = canvas.width = Math.max(canvas.clientWidth, 320);
+    canvas.height = 220;
+    ctx.clearRect(0, 0, width, 220);
+
+    if (!entries.length) {
+        ctx.fillStyle = "#6e6258";
+        ctx.font = "16px Arial";
+        ctx.fillText("Aucune donnee", 20, 40);
+        return;
+    }
+
+    const maxValue = Math.max(...entries.map(entry => entry[valueKey]), 1);
+    const gap = 18;
+    const barWidth = Math.max(40, Math.floor((width - 40) / entries.length) - gap);
+
+    entries.forEach((entry, index) => {
+        const barHeight = Math.round((entry[valueKey] / maxValue) * 130);
+        const x = 24 + index * (barWidth + gap);
+        const y = 168 - barHeight;
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, barWidth, barHeight);
+        ctx.fillStyle = "#1f1a17";
+        ctx.font = "12px Arial";
+        ctx.fillText(String(entry[labelKey]).replaceAll("_", " "), x, 192);
+        ctx.fillText(entry[valueKey], x, y - 8);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+    renderBarChart("ceremony-chart", "ceremony-data", "ceremony_type", "total", "#0f5d5e");
+    renderBarChart("plans-chart", "plans-data", "plan_code", "total", "#c67d2d");
+});
+</script>
 {% endblock %}

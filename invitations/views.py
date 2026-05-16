@@ -12,6 +12,8 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.mail import send_mail
+from django.db import transaction
+from django.db.models import Count
 from django.http import FileResponse, Http404, HttpResponse, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse, reverse_lazy
@@ -23,8 +25,8 @@ from django.views.generic import CreateView, DetailView, ListView, TemplateView,
 from openpyxl import Workbook, load_workbook
 from PIL import Image, ImageDraw, ImageFont
 
-from .forms import ContactAdminForm, ExcelUploadForm, InvitationForm, PaymentInitiationForm, SignUpForm
-from .models import Invitation, OrganizerProfile, PaymentTransaction, Subscription
+from .forms import AdminSupportReplyForm, ContactAdminForm, ExcelUploadForm, InvitationForm, PaymentInitiationForm, SignUpForm
+from .models import Invitation, OrganizerProfile, PaymentTransaction, Subscription, SupportMessage
 
 
 def _combine_limits(previous_subscription, new_limit):
@@ -267,12 +269,14 @@ class SubscriptionDashboardView(LoginRequiredMixin, TemplateView):
         profile = self.request.user.organizer_profile
         subscription = profile.active_subscription or profile.subscriptions.first()
         payments = PaymentTransaction.objects.filter(subscription__organizer=profile).select_related("subscription")
+        show_payment_form = not (subscription and subscription.is_paid and not self.request.GET.get("renew"))
         context.update(
             {
                 "profile": profile,
                 "subscription": subscription,
                 "active_subscription": profile.active_subscription,
                 "payments": payments,
+                "show_payment_form": show_payment_form,
                 "payment_form": PaymentInitiationForm(
                     initial={
                         "planned_invitations": profile.planned_invitations,
@@ -327,6 +331,7 @@ class InvitationListView(InvitationPermissionMixin, ListView):
 
 
 class InvitationExcelImportView(InvitationPermissionMixin, View):
+    @transaction.atomic
     def post(self, request):
         form = ExcelUploadForm(request.POST, request.FILES)
         if not form.is_valid():
@@ -358,8 +363,9 @@ class InvitationCreateView(InvitationPermissionMixin, CreateView):
     form_class = InvitationForm
     template_name = "invitations/invitation_form.html"
 
+    @transaction.atomic
     def form_valid(self, form):
-        profile = self.request.user.organizer_profile
+        profile = OrganizerProfile.objects.select_for_update().get(user=self.request.user)
         subscription = profile.active_subscription
         if not subscription or not subscription.is_paid:
             messages.error(self.request, "Votre abonnement doit etre paye avant de creer une invitation.")
@@ -448,11 +454,21 @@ class StaffReportView(StaffRequiredMixin, TemplateView):
         transactions = PaymentTransaction.objects.select_related(
             "subscription", "subscription__organizer", "subscription__organizer__user"
         )[:20]
+        support_messages = SupportMessage.objects.select_related("organizer", "organizer__user", "sender_user")[:12]
+        ceremonies = list(
+            OrganizerProfile.objects.values("ceremony_type").annotate(total=Count("id")).order_by("ceremony_type")
+        )
+        plans = list(Subscription.objects.values("plan_code").annotate(total=Count("id")).order_by("plan_code"))
         context.update(
             {
                 "profiles": profiles,
                 "subscriptions": subscriptions,
                 "transactions": transactions,
+                "support_messages": support_messages,
+                "chart_data": {
+                    "ceremonies": ceremonies,
+                    "plans": plans,
+                },
                 "totals": {
                     "users": User.objects.count(),
                     "organizers": profiles.count(),
@@ -484,12 +500,20 @@ class ContactAdminView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["form"] = kwargs.get("form") or ContactAdminForm()
+        profile = getattr(self.request.user, "organizer_profile", None)
+        if profile:
+            unread_messages = profile.support_messages.filter(sender_type=SupportMessage.SENDER_ADMIN, is_read_by_user=False)
+            unread_messages.update(is_read_by_user=True)
+            context["messages_thread"] = profile.support_messages.select_related("sender_user")[:30]
         return context
 
     def post(self, request, *args, **kwargs):
         form = ContactAdminForm(request.POST)
         if form.is_valid():
             profile = getattr(request.user, "organizer_profile", None)
+            if not profile:
+                messages.error(request, "Votre profil organisateur est incomplet.")
+                return redirect("invitations:home")
             subject = f"[Contact utilisateur] {form.cleaned_data['subject']}"
             body = (
                 f"Utilisateur: {request.user.get_full_name() or request.user.username}\n"
@@ -505,15 +529,53 @@ class ContactAdminView(LoginRequiredMixin, TemplateView):
                 [settings.ADMIN_CONTACT_EMAIL],
                 fail_silently=False,
             )
+            SupportMessage.objects.create(
+                organizer=profile,
+                sender_type=SupportMessage.SENDER_USER,
+                sender_user=request.user,
+                subject=form.cleaned_data["subject"],
+                message=form.cleaned_data["message"],
+                is_read_by_admin=False,
+                is_read_by_user=True,
+            )
             messages.success(request, "Votre message a ete envoye a l'administration.")
             return redirect("invitations:contact-admin")
         return self.render_to_response(self.get_context_data(form=form))
 
 
+class StaffReplySupportView(StaffRequiredMixin, View):
+    def post(self, request, organizer_id):
+        profile = get_object_or_404(OrganizerProfile, pk=organizer_id)
+        form = AdminSupportReplyForm(request.POST)
+        if not form.is_valid():
+            messages.error(request, "La reponse admin est invalide.")
+            return redirect("invitations:staff-report")
+
+        SupportMessage.objects.create(
+            organizer=profile,
+            sender_type=SupportMessage.SENDER_ADMIN,
+            sender_user=request.user,
+            subject=form.cleaned_data["subject"],
+            message=form.cleaned_data["message"],
+            is_read_by_admin=True,
+            is_read_by_user=False,
+        )
+        send_mail(
+            f"[Administration] {form.cleaned_data['subject']}",
+            form.cleaned_data["message"],
+            settings.DEFAULT_FROM_EMAIL,
+            [profile.user.email] if profile.user.email else [settings.ADMIN_CONTACT_EMAIL],
+            fail_silently=False,
+        )
+        messages.success(request, "La reponse a ete enregistree et envoyee.")
+        return redirect("invitations:staff-report")
+
+
 @login_required
 @require_POST
+@transaction.atomic
 def start_payment(request):
-    profile = request.user.organizer_profile
+    profile = OrganizerProfile.objects.select_for_update().get(user=request.user)
     subscription = profile.active_subscription or profile.subscriptions.first()
     active_subscription = profile.active_subscription
     form = PaymentInitiationForm(request.POST)
@@ -664,9 +726,10 @@ def payment_callback(request, provider):
 
 @login_required
 @require_POST
+@transaction.atomic
 def mark_printed(request, slug):
     invitation = get_object_or_404(
-        Invitation, slug=slug, organizer=request.user.organizer_profile
+        Invitation.objects.select_for_update(), slug=slug, organizer=request.user.organizer_profile
     )
     invitation.mark_printed()
     return redirect(f"{reverse('invitations:detail', kwargs={'slug': slug})}?autoprint=1")
@@ -674,9 +737,10 @@ def mark_printed(request, slug):
 
 @login_required
 @require_POST
+@transaction.atomic
 def mark_shared(request, slug):
     invitation = get_object_or_404(
-        Invitation, slug=slug, organizer=request.user.organizer_profile
+        Invitation.objects.select_for_update(), slug=slug, organizer=request.user.organizer_profile
     )
     invitation.mark_shared()
     absolute_url = request.build_absolute_uri(

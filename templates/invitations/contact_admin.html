@@ -27,17 +27,38 @@
             {% endfor %}
             <button class="button button-primary" type="submit">Envoyer le message</button>
         </form>
+
+        {% if messages_thread %}
+        <section class="thread-panel">
+            <div class="section-head">
+                <div>
+                    <p class="eyebrow">Messages</p>
+                    <h2>Historique des echanges</h2>
+                </div>
+            </div>
+            <div class="message-thread">
+                {% for item in messages_thread %}
+                <article class="thread-bubble {% if item.sender_type == 'admin' %}thread-bubble-admin{% else %}thread-bubble-user{% endif %}">
+                    <span class="badge">{% if item.sender_type == 'admin' %}Administration{% else %}Vous{% endif %}</span>
+                    <h3>{{ item.subject }}</h3>
+                    <p>{{ item.message }}</p>
+                    <small class="field-help">{{ item.created_at|date:"d/m/Y H:i" }}</small>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+        {% endif %}
     </section>
 
     <aside class="preview-panel">
         <p class="eyebrow">Assistance</p>
         <div class="preview-card">
             <span class="badge">Contact direct</span>
-            <h2>Un message clair et rapide</h2>
+            <h2>Boite de reception integree</h2>
             <p class="preview-copy">
-                L'administrateur recevra votre demande avec votre identite, votre ceremonie et votre contact.
+                L'administration recoit votre demande et peut vous repondre directement dans cet espace.
             </p>
-            <div class="preview-seat">La destination email d'administration est definie dans la configuration du site.</div>
+            <div class="preview-seat">Les reponses de l'admin seront visibles ici des leur envoi.</div>
         </div>
     </aside>
 </main>

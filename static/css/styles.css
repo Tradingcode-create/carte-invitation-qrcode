@@ -242,6 +242,59 @@ p {
     gap: 1rem;
 }
 
+.thread-panel {
+    margin-top: 1.5rem;
+    display: grid;
+    gap: 1rem;
+}
+
+.message-thread {
+    display: grid;
+    gap: 1rem;
+}
+
+.thread-bubble {
+    padding: 1rem 1.1rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--line);
+}
+
+.thread-bubble h3,
+.chart-card h3 {
+    margin-bottom: 0.5rem;
+    font-size: 1.6rem;
+}
+
+.thread-bubble p {
+    margin: 0.4rem 0 0.7rem;
+}
+
+.thread-bubble-user {
+    background: rgba(255, 255, 255, 0.82);
+}
+
+.thread-bubble-admin {
+    background: rgba(15, 93, 94, 0.08);
+}
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.chart-card {
+    padding: 1.2rem;
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid var(--line);
+}
+
+.chart-card canvas {
+    width: 100%;
+    display: block;
+}
+
 .form-layout {
     align-items: start;
     flex-wrap: wrap;

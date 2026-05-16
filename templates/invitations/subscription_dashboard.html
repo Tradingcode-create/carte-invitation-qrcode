@@ -39,6 +39,21 @@
             {% endif %}
         </div>
 
+        {% if subscription.is_paid and not show_payment_form %}
+        <div class="import-panel">
+            <div>
+                <p class="eyebrow">Abonnement actif</p>
+                <h2>Coordonnees de paiement masquees</h2>
+                <p class="hero-text">
+                    Votre abonnement est actif. Les champs de paiement disparaissent apres validation pour garder cet espace simple.
+                </p>
+            </div>
+            <div class="action-row">
+                <a class="button button-primary" href="{% url 'invitations:subscription' %}?renew=1">Renouveler ou upgrader</a>
+                <a class="button button-secondary" href="{% url 'invitations:list' %}">Voir mes invitations</a>
+            </div>
+        </div>
+        {% else %}
         <form method="post" action="{% url 'invitations:start-payment' %}" class="invitation-form">
             {% csrf_token %}
             <div class="field-group">
@@ -64,40 +79,26 @@
                     <div class="error-list">{{ payment_form.phone_number.errors }}</div>
                     {% endif %}
                 </div>
-                <p class="field-help">
-                    Utilisez ce mode pour Airtel Money, Orange Money, AfriMoney ou M-Pesa.
-                </p>
+                <p class="field-help">Utilisez ce mode pour Airtel Money, Orange Money, AfriMoney ou M-Pesa.</p>
             </div>
 
             <div id="demo-card-fields" class="payment-mode-group">
                 <div class="field-group">
                     <label for="{{ payment_form.cardholder_name.id_for_label }}">{{ payment_form.cardholder_name.label }}</label>
                     {{ payment_form.cardholder_name }}
-                    {% if payment_form.cardholder_name.errors %}
-                    <div class="error-list">{{ payment_form.cardholder_name.errors }}</div>
-                    {% endif %}
                 </div>
                 <div class="field-group">
                     <label for="{{ payment_form.card_number.id_for_label }}">{{ payment_form.card_number.label }}</label>
                     {{ payment_form.card_number }}
-                    {% if payment_form.card_number.errors %}
-                    <div class="error-list">{{ payment_form.card_number.errors }}</div>
-                    {% endif %}
                 </div>
                 <div class="split-fields">
                     <div class="field-group">
                         <label for="{{ payment_form.expiry_date.id_for_label }}">{{ payment_form.expiry_date.label }}</label>
                         {{ payment_form.expiry_date }}
-                        {% if payment_form.expiry_date.errors %}
-                        <div class="error-list">{{ payment_form.expiry_date.errors }}</div>
-                        {% endif %}
                     </div>
                     <div class="field-group">
                         <label for="{{ payment_form.cvv.id_for_label }}">{{ payment_form.cvv.label }}</label>
                         {{ payment_form.cvv }}
-                        {% if payment_form.cvv.errors %}
-                        <div class="error-list">{{ payment_form.cvv.errors }}</div>
-                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -107,15 +108,14 @@
             {% endif %}
 
             <p id="demo-card-help" class="field-help">
-                Mode demo local: choisissez <strong>Carte demo (Visa)</strong> puis utilisez
-                <strong>4111 1111 1111 1111</strong> ou <strong>4242 4242 4242 4242</strong>,
-                une expiration libre et un CVV libre.
+                Mode demo local: utilisez 4111 1111 1111 1111 ou 4242 4242 4242 4242.
             </p>
             <p class="field-help">
                 Si vous avez deja un abonnement actif non epuise, son reliquat sera automatiquement ajoute au nouveau forfait apres validation du paiement.
             </p>
             <button class="button button-primary" type="submit">Initialiser le paiement securise</button>
         </form>
+        {% endif %}
 
         {% if subscription.is_paid %}
         <div class="action-row">
@@ -131,47 +131,31 @@
             <span class="badge">Paiement</span>
             <h2>Airtel, Orange, AfriMoney, M-Pesa ou carte demo</h2>
             <p class="preview-copy">
-                Le code est prepare pour des appels HTTPS signes et pour la verification de callback.
-                Tant que les identifiants fournisseurs ne sont pas configures, vous pouvez utiliser la carte demo locale.
+                Le projet est pret pour les API securisees et supporte aussi le mode demo local.
             </p>
-            <div class="preview-seat">Webhook securise pour Mobile Money, validation immediate pour la demo.</div>
+            <div class="preview-seat">Base evolutive et renouvellement cumulatif du quota.</div>
         </div>
 
         <div class="payment-icons-grid">
             <article class="payment-icon-card">
                 <img class="payment-logo" src="{% static 'img/payments/visa.svg' %}" alt="Visa">
-                <div>
-                    <strong>Carte demo Visa</strong>
-                    <p>Mode local pour tests immediats.</p>
-                </div>
+                <div><strong>Carte demo Visa</strong><p>Mode local pour tests immediats.</p></div>
             </article>
             <article class="payment-icon-card">
                 <img class="payment-logo" src="{% static 'img/payments/airtel-money.svg' %}" alt="Airtel Money">
-                <div>
-                    <strong>Airtel Money</strong>
-                    <p>Paiement mobile rouge Airtel.</p>
-                </div>
+                <div><strong>Airtel Money</strong><p>Paiement mobile rouge Airtel.</p></div>
             </article>
             <article class="payment-icon-card">
                 <img class="payment-logo" src="{% static 'img/payments/orange-money.svg' %}" alt="Orange Money">
-                <div>
-                    <strong>Orange Money</strong>
-                    <p>Paiement mobile Orange.</p>
-                </div>
+                <div><strong>Orange Money</strong><p>Paiement mobile Orange.</p></div>
             </article>
             <article class="payment-icon-card">
                 <img class="payment-logo" src="{% static 'img/payments/afrimoney.svg' %}" alt="AfriMoney">
-                <div>
-                    <strong>AfriMoney</strong>
-                    <p>Mode portefeuille Africell.</p>
-                </div>
+                <div><strong>AfriMoney</strong><p>Mode portefeuille Africell.</p></div>
             </article>
             <article class="payment-icon-card">
                 <img class="payment-logo" src="{% static 'img/payments/mpesa.svg' %}" alt="M-Pesa">
-                <div>
-                    <strong>M-Pesa</strong>
-                    <p>Portefeuille mobile M-Pesa.</p>
-                </div>
+                <div><strong>M-Pesa</strong><p>Portefeuille mobile M-Pesa.</p></div>
             </article>
         </div>
     </aside>
@@ -214,9 +198,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const demoCardFields = document.getElementById("demo-card-fields");
     const demoHelp = document.getElementById("demo-card-help");
 
-    if (!provider || !mobileMoneyFields || !demoCardFields || !demoHelp) {
-        return;
-    }
+    if (!provider || !mobileMoneyFields || !demoCardFields || !demoHelp) return;
 
     function syncPaymentMode() {
         const isDemoCard = provider.value === "demo_card";

@@ -8,6 +8,7 @@ from decimal import Decimal
 
 import qrcode
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import models
 from django.template.defaultfilters import slugify
@@ -158,6 +159,38 @@ class PaymentTransaction(models.Model):
     def sign_payload(payload, secret):
         body = json.dumps(payload, sort_keys=True).encode("utf-8")
         return hmac.new(secret.encode("utf-8"), body, hashlib.sha256).hexdigest()
+
+
+class SupportMessage(models.Model):
+    SENDER_USER = "user"
+    SENDER_ADMIN = "admin"
+    SENDER_CHOICES = [
+        (SENDER_USER, "Utilisateur"),
+        (SENDER_ADMIN, "Administration"),
+    ]
+
+    organizer = models.ForeignKey(
+        OrganizerProfile, on_delete=models.CASCADE, related_name="support_messages"
+    )
+    sender_type = models.CharField(max_length=10, choices=SENDER_CHOICES, default=SENDER_USER)
+    sender_user = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name="sent_support_messages"
+    )
+    subject = models.CharField(max_length=150)
+    message = models.TextField()
+    is_read_by_user = models.BooleanField(default=False)
+    is_read_by_admin = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.organizer.user.username} - {self.subject}"
+
+    def clean(self):
+        if self.sender_type == self.SENDER_ADMIN and not (self.sender_user and self.sender_user.is_staff):
+            raise ValidationError("Un message admin doit etre envoye par un utilisateur staff.")
 
 
 class Invitation(models.Model):

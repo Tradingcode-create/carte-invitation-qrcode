@@ -1,6 +1,8 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.contrib.auth.models import User
 
-from .models import Invitation, OrganizerProfile, PaymentTransaction, Subscription
+from .models import Invitation, OrganizerProfile, PaymentTransaction, Subscription, SupportMessage
 
 
 @admin.register(OrganizerProfile)
@@ -54,3 +56,19 @@ class InvitationAdmin(admin.ModelAdmin):
     list_filter = ("organizer__ceremony_type", "printed_at", "whatsapp_shared_at")
     search_fields = ("guest_name", "organizer__user__username", "seat_location")
     readonly_fields = ("share_token",)
+
+
+@admin.register(SupportMessage)
+class SupportMessageAdmin(admin.ModelAdmin):
+    list_display = ("subject", "organizer", "sender_type", "is_read_by_admin", "is_read_by_user", "created_at")
+    list_filter = ("sender_type", "is_read_by_admin", "is_read_by_user", "created_at")
+    search_fields = ("subject", "message", "organizer__user__username", "organizer__user__email")
+    autocomplete_fields = ("organizer", "sender_user")
+
+
+admin.site.unregister(User)
+
+
+@admin.register(User)
+class UserAdmin(DjangoUserAdmin):
+    list_display = ("username", "email", "first_name", "last_name", "is_staff", "is_active")

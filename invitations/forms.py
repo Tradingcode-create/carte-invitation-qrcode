@@ -156,6 +156,20 @@ class ContactAdminForm(forms.Form):
     )
 
 
+class AdminSupportReplyForm(forms.Form):
+    subject = forms.CharField(
+        label="Sujet",
+        max_length=150,
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Reponse a votre demande"}),
+    )
+    message = forms.CharField(
+        label="Reponse",
+        widget=forms.Textarea(
+            attrs={"class": "form-control", "rows": 5, "placeholder": "Message de l'administration"}
+        ),
+    )
+
+
 class ExcelUploadForm(forms.Form):
     excel_file = forms.FileField(
         label="Fichier Excel",
