@@ -5,7 +5,7 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = "django-insecure-change-me-before-production"
-DEBUG = False
+DEBUG = True
 ALLOWED_HOSTS = [
     ".onrender.com",
     "localhost",
