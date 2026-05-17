@@ -35,7 +35,7 @@
         </section>
         <aside class="ticket-stub">
             {% if invitation.qr_code %}
-            <img src="{{ invitation.qr_code.url }}" alt="{% tr 'QR code de l invitation' 'Invitation QR code' %}">
+            <img src="{% url 'invitations:shared-qr-preview' invitation.share_token %}" alt="{% tr 'QR code de l invitation' 'Invitation QR code' %}">
             {% endif %}
         </aside>
     </article>

@@ -53,7 +53,7 @@
         </div>
         <div id="staff-support-feed" class="card-grid">
             {% for support_message in support_messages %}
-            <article class="invite-card">
+            <article class="invite-card admin-support-card">
                 <span class="badge">{{ support_message.organizer.user.username }}</span>
                 <h3>{{ support_message.subject }}</h3>
                 <p>{{ support_message.message }}</p>

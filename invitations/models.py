@@ -3,7 +3,9 @@ import hmac
 import io
 import json
 import os
+import re
 import secrets
+import unicodedata
 import uuid
 from decimal import Decimal
 
@@ -311,18 +313,16 @@ class Invitation(models.Model):
         return bool(self.printed_at or self.whatsapp_shared_at)
 
     def get_payload(self):
-        welcome_message = self.welcome_message.strip() or tr_text(
-            "Bienvenue a cette ceremonie.",
-            "Welcome to this event.",
-        )
-        payload = {
-            "ceremonie": self.event_label,
-            "invite": self.guest_name,
-            "place": self.seat_location,
-            "message": welcome_message,
-            "organisateur": self.organizer.user.get_full_name() or self.organizer.user.username,
-        }
-        return json.dumps(payload, ensure_ascii=False, indent=2)
+        guest = self._sanitize_qr_value(self.guest_name)
+        seat = self._sanitize_qr_value(self.seat_location)
+        return f"INVITE:{guest}\nPLACE:{seat}"
+
+    @staticmethod
+    def _sanitize_qr_value(value):
+        normalized = unicodedata.normalize("NFKD", value or "")
+        ascii_only = normalized.encode("ascii", "ignore").decode("ascii")
+        compact = re.sub(r"[^A-Z0-9 ]+", " ", ascii_only.upper())
+        return re.sub(r"\s+", " ", compact).strip()
 
     def _build_slug(self):
         base = slugify(f"{self.organizer.user.username}-{self.guest_name}")[:170] or "invitation"

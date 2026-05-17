@@ -68,7 +68,7 @@
         <aside class="ticket-stub">
             <p class="eyebrow">{% tr "Controle" "Control" %}</p>
             {% if invitation.qr_code %}
-            <img src="{{ invitation.qr_code.url }}" alt="{% tr 'QR code de l invitation' 'Invitation QR code' %}">
+            <img src="{% url 'invitations:qr-preview' invitation.slug %}" alt="{% tr 'QR code de l invitation' 'Invitation QR code' %}">
             {% endif %}
             <div class="ticket-stub-copy">
                 <p><strong>{{ invitation.guest_name }}</strong></p>

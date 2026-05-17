@@ -663,7 +663,7 @@ class ContactAdminView(LoginRequiredMixin, TemplateView):
         if profile:
             unread_messages = profile.support_messages.filter(sender_type=SupportMessage.SENDER_ADMIN, is_read_by_user=False)
             unread_messages.update(is_read_by_user=True)
-            context["messages_thread"] = profile.support_messages.select_related("sender_user").order_by("created_at")[:50]
+            context["messages_thread"] = profile.support_messages.select_related("sender_user").order_by("-created_at")[:50]
             context["thread_started"] = profile.support_messages.exists()
             context["can_send_message"] = profile.support_user_can_send
         return context
@@ -800,9 +800,9 @@ def contact_admin_thread_data(request):
 
     profile.support_messages.filter(sender_type=SupportMessage.SENDER_ADMIN, is_read_by_user=False).update(is_read_by_user=True)
     thread_messages = list(
-        profile.support_messages.select_related("sender_user").order_by("created_at")[:50]
+        profile.support_messages.select_related("sender_user").order_by("-created_at")[:50]
     )
-    latest = thread_messages[-1].created_at.isoformat() if thread_messages else ""
+    latest = thread_messages[0].created_at.isoformat() if thread_messages else ""
     return JsonResponse(
         {
             "messages": [
@@ -1062,6 +1062,25 @@ def download_qrcode(request, slug):
         as_attachment=True,
         filename=f"qrcode-{invitation.slug}.png",
     )
+
+
+@login_required
+def invitation_qr_preview(request, slug):
+    invitation = get_object_or_404(
+        Invitation.objects.select_related("subscription"), slug=slug, organizer=request.user.organizer_profile
+    )
+    _ensure_invitation_qr(invitation)
+    if not invitation.qr_code:
+        raise Http404("QR code indisponible")
+    return FileResponse(invitation.qr_code.open("rb"), content_type="image/png")
+
+
+def shared_invitation_qr_preview(request, token):
+    invitation = get_object_or_404(Invitation.objects.select_related("subscription"), share_token=token)
+    _ensure_invitation_qr(invitation)
+    if not invitation.qr_code:
+        raise Http404("QR code indisponible")
+    return FileResponse(invitation.qr_code.open("rb"), content_type="image/png")
 
 
 @login_required

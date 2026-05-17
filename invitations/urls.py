@@ -22,12 +22,14 @@ from .views import (
     SubscriptionDashboardView,
     download_excel_template,
     download_invitation_image,
+    invitation_qr_preview,
     notifications_poll,
     download_qrcode,
     mark_printed,
     mark_shared,
     payment_callback,
     set_language_preference,
+    shared_invitation_qr_preview,
     start_payment,
 )
 
@@ -61,6 +63,8 @@ urlpatterns = [
     path("invitation/<slug:slug>/imprimer/", mark_printed, name="print"),
     path("invitation/<slug:slug>/partager/", mark_shared, name="share"),
     path("invitation/<slug:slug>/qrcode/", download_qrcode, name="download-qrcode"),
+    path("invitation/<slug:slug>/qrcode/apercu/", invitation_qr_preview, name="qr-preview"),
     path("invitation/<slug:slug>/image/", download_invitation_image, name="download-image"),
     path("i/<uuid:token>/", SharedInvitationDetailView.as_view(), name="shared-detail"),
+    path("i/<uuid:token>/qrcode/", shared_invitation_qr_preview, name="shared-qr-preview"),
 ]

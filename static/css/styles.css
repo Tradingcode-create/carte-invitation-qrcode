@@ -89,6 +89,25 @@ p {
     align-items: center;
 }
 
+.session-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.65rem 0.95rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.78);
+    border: 1px solid var(--line);
+    font-size: 0.9rem;
+}
+
+.session-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #14a44d;
+    box-shadow: 0 0 0 4px rgba(20, 164, 77, 0.16);
+}
+
 .nav-links form {
     margin: 0;
 }
@@ -303,6 +322,10 @@ p {
 .chart-card canvas {
     width: 100%;
     display: block;
+}
+
+.admin-support-card {
+    border: 1px solid rgba(15, 93, 94, 0.18);
 }
 
 .form-layout {
