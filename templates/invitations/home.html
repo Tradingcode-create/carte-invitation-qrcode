@@ -29,6 +29,27 @@
     <section class="listing-section">
         <div class="section-head">
             <div>
+                <p class="eyebrow">{% tr "Votre avis" "Your rating" %}</p>
+                <h2>{% tr "Notez le site" "Rate the site" %}</h2>
+            </div>
+        </div>
+        <form method="post" action="{% url 'invitations:submit-rating' %}" class="star-rating-form">
+            {% csrf_token %}
+            <div class="star-rating-inputs">
+                {% for choice in rating_form.stars %}
+                <label class="star-option">
+                    {{ choice.tag }}
+                    <span class="star-visual">★</span>
+                </label>
+                {% endfor %}
+            </div>
+            <button class="button button-secondary" type="submit">{% tr "Enregistrer ma note" "Save my rating" %}</button>
+        </form>
+    </section>
+
+    <section class="listing-section">
+        <div class="section-head">
+            <div>
                 <p class="eyebrow">{% tr "Billets recents" "Recent passes" %}</p>
                 <h2>{{ subscription.plan_label }}</h2>
             </div>

@@ -43,6 +43,7 @@ class OrganizerProfile(models.Model):
     planned_invitations = models.PositiveIntegerField("Nombre d'invitations prevu", default=1)
     phone_number = models.CharField("Numero Mobile Money", max_length=30, blank=True)
     preferred_language = models.CharField(max_length=5, choices=LANGUAGE_CHOICES, default=LANG_FR)
+    default_welcome_message = models.TextField(blank=True)
     support_thread_subject = models.CharField(max_length=150, blank=True)
     support_user_can_send = models.BooleanField(default=True)
     last_seen_at = models.DateTimeField(null=True, blank=True)
@@ -276,6 +277,22 @@ class SiteVisit(models.Model):
         return f"{self.path} - {self.session_key}"
 
 
+class SiteRating(models.Model):
+    organizer = models.OneToOneField(
+        OrganizerProfile, on_delete=models.CASCADE, related_name="site_rating"
+    )
+    stars = models.PositiveSmallIntegerField(default=5)
+    comment = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"{self.organizer.user.username} - {self.stars}/5"
+
+
 class Invitation(models.Model):
     organizer = models.ForeignKey(
         OrganizerProfile, on_delete=models.CASCADE, related_name="invitations"
@@ -315,7 +332,7 @@ class Invitation(models.Model):
     def get_payload(self):
         guest = self._sanitize_qr_value(self.guest_name)
         seat = self._sanitize_qr_value(self.seat_location)
-        return f"INVITE:{guest}\nPLACE:{seat}"
+        return f"{guest}\n{seat}"
 
     @staticmethod
     def _sanitize_qr_value(value):

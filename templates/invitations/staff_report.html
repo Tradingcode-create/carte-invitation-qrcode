@@ -23,7 +23,7 @@
             <article class="stat-card"><span>{% tr "Utilisateurs" "Users" %}</span><strong>{{ totals.users }}</strong></article>
             <article class="stat-card"><span>{% tr "Visites" "Visits" %}</span><strong>{{ totals.site_hits }}</strong></article>
             <article class="stat-card"><span>{% tr "Visiteurs uniques" "Unique visitors" %}</span><strong>{{ totals.unique_visitors }}</strong></article>
-            <article class="stat-card"><span>{% tr "Revenus du mois" "Monthly revenue" %}</span><strong>{{ totals.revenue_month }} USD</strong></article>
+            <article class="stat-card"><span>{% tr "Connectes" "Connected" %}</span><strong>{{ totals.connected_users }}</strong></article>
         </div>
     </section>
 
@@ -81,6 +81,33 @@
             {% endfor %}
         </div>
     </section>
+
+    <section class="listing-section no-print">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow">{% tr "Connexions" "Connections" %}</p>
+                <h2>{% tr "Utilisateurs actuellement connectes" "Users currently online" %}</h2>
+            </div>
+        </div>
+        <div class="card-grid">
+            {% for profile in connected_profiles %}
+            <article class="invite-card">
+                <span class="badge">{{ profile.user.username }}</span>
+                <h3>{{ profile.user.get_full_name|default:profile.user.username }}</h3>
+                <p>{{ profile.user.email|default:"-" }}</p>
+                <dl>
+                    <div><dt>{% tr "Derniere activite" "Last activity" %}</dt><dd>{{ profile.last_seen_at|date:"d/m/Y H:i" }}</dd></div>
+                    <div><dt>{% tr "Ceremonie" "Ceremony" %}</dt><dd>{{ profile.get_event_label }}</dd></div>
+                </dl>
+            </article>
+            {% empty %}
+            <article class="empty-card">
+                <h3>{% tr "Aucun utilisateur connecte" "No connected users" %}</h3>
+                <p>{% tr "Les prochaines connexions apparaitront ici." "New active users will appear here." %}</p>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
 </main>
 
 {{ chart_data.ceremonies|json_script:"ceremony-data" }}
@@ -105,19 +132,41 @@ function renderBarChart(canvasId, dataId, labelKey, valueKey, color) {
 
     if (!entries.length) return;
 
+    const chartHeight = 150;
+    const baseline = 180;
+    const leftPadding = 40;
     const maxValue = Math.max(...entries.map(entry => entry[valueKey]), 1);
-    const gap = 18;
-    const barWidth = Math.max(38, Math.floor((width - 40) / entries.length) - gap);
+    const gap = 14;
+    const barWidth = Math.max(28, Math.floor((width - 60) / entries.length) - gap);
+
+    ctx.strokeStyle = "rgba(31, 26, 23, 0.15)";
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+        const y = baseline - Math.round((chartHeight / 4) * i);
+        ctx.beginPath();
+        ctx.moveTo(leftPadding, y);
+        ctx.lineTo(width - 12, y);
+        ctx.stroke();
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(leftPadding, 20);
+    ctx.lineTo(leftPadding, baseline);
+    ctx.lineTo(width - 12, baseline);
+    ctx.stroke();
 
     entries.forEach((entry, index) => {
-        const barHeight = Math.round((entry[valueKey] / maxValue) * 130);
-        const x = 24 + index * (barWidth + gap);
-        const y = 168 - barHeight;
-        ctx.fillStyle = color;
+        const barHeight = Math.round((entry[valueKey] / maxValue) * chartHeight);
+        const x = leftPadding + 10 + index * (barWidth + gap);
+        const y = baseline - barHeight;
+        const gradient = ctx.createLinearGradient(0, y, 0, baseline);
+        gradient.addColorStop(0, color);
+        gradient.addColorStop(1, "rgba(255,255,255,0.9)");
+        ctx.fillStyle = gradient;
         ctx.fillRect(x, y, barWidth, barHeight);
         ctx.fillStyle = "#1f1a17";
         ctx.font = "12px Arial";
-        ctx.fillText(String(entry[labelKey]).replaceAll("_", " "), x, 192);
+        ctx.fillText(String(entry[labelKey]).replaceAll("_", " "), x, 200);
         ctx.fillText(entry[valueKey], x, y - 8);
     });
 }
@@ -130,53 +179,23 @@ document.addEventListener("DOMContentLoaded", function () {
     renderBarChart("revenue-chart", "revenue-data", "label", "total", "#9a6027");
     renderBarChart("visits-chart", "visits-data", "label", "total", "#5b5bd6");
 
-    const supportFeed = document.getElementById("staff-support-feed");
-    if (!supportFeed) return;
-    const csrfTokenInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
-    const csrfToken = csrfTokenInput ? csrfTokenInput.value : "";
-
+    let latestTimestamp = "";
     async function refreshSupportFeed() {
         try {
-            const response = await fetch("{% url 'invitations:staff-support-feed' %}", {
+            const response = await fetch("{% url 'invitations:notifications-poll' %}", {
                 headers: {"X-Requested-With": "XMLHttpRequest"}
             });
             if (!response.ok) return;
             const data = await response.json();
-            if (!data.items) return;
-            supportFeed.innerHTML = "";
-            data.items.forEach(function (item) {
-                const card = document.createElement("article");
-                card.className = "invite-card";
-                const toggleLabel = item.can_send ? "{% tr 'Bloquer l envoi user' 'Block user sending' %}" : "{% tr 'Reautoriser l envoi user' 'Re-enable user sending' %}";
-                card.innerHTML = `
-                    <span class="badge">${item.username}</span>
-                    <h3>${item.subject}</h3>
-                    <p>${item.message}</p>
-                    <dl>
-                        <div><dt>{% tr "Expediteur" "Sender" %}</dt><dd>${item.sender_label}</dd></div>
-                        <div><dt>{% tr "Date" "Date" %}</dt><dd>${item.created_at}</dd></div>
-                    </dl>
-                    <form method="post" action="/staff/rapport/repondre/${item.organizer_id}/" class="invitation-form">
-                        <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
-                        <div class="field-group">
-                            <input class="form-control" type="text" name="subject" value="Re: ${item.subject}" placeholder="{% tr 'Sujet de la reponse' 'Reply subject' %}">
-                        </div>
-                        <div class="field-group">
-                            <textarea class="form-control" name="message" rows="4" placeholder="{% tr 'Votre reponse a l utilisateur' 'Your reply to the user' %}"></textarea>
-                        </div>
-                        <button class="button button-secondary" type="submit">{% tr "Repondre" "Reply" %}</button>
-                    </form>
-                    <form method="post" action="/staff/rapport/toggle-support/${item.organizer_id}/">
-                        <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
-                        <button class="button button-secondary" type="submit">${toggleLabel}</button>
-                    </form>
-                `;
-                supportFeed.appendChild(card);
-            });
+            if (latestTimestamp && data.latest_timestamp && data.latest_timestamp !== latestTimestamp) {
+                window.location.reload();
+            }
+            latestTimestamp = data.latest_timestamp || latestTimestamp;
         } catch (error) {
         }
     }
 
+    refreshSupportFeed();
     setInterval(refreshSupportFeed, 5000);
 });
 </script>

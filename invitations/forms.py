@@ -3,7 +3,7 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.models import User
 
 from .localization import tr_text
-from .models import Invitation, OrganizerProfile, Subscription
+from .models import Invitation, OrganizerProfile, SiteRating, Subscription
 
 
 class SignUpForm(UserCreationForm):
@@ -30,13 +30,6 @@ class SignUpForm(UserCreationForm):
         choices=Subscription.PROVIDER_CHOICES,
         widget=forms.Select(attrs={"class": "form-control"}),
     )
-    preferred_language = forms.ChoiceField(
-        label="Langue preferee",
-        choices=OrganizerProfile.LANGUAGE_CHOICES,
-        widget=forms.Select(attrs={"class": "form-control"}),
-        initial=OrganizerProfile.LANG_FR,
-    )
-
     class Meta(UserCreationForm.Meta):
         model = User
         fields = (
@@ -48,7 +41,6 @@ class SignUpForm(UserCreationForm):
             "planned_invitations",
             "phone_number",
             "provider",
-            "preferred_language",
             "password1",
             "password2",
         )
@@ -75,7 +67,6 @@ class SignUpForm(UserCreationForm):
         )
         self.fields["phone_number"].label = tr_text("Numero Mobile Money", "Mobile Money number")
         self.fields["provider"].label = tr_text("Operateur de paiement", "Payment provider")
-        self.fields["preferred_language"].label = tr_text("Langue preferee", "Preferred language")
         self.fields["password1"].label = tr_text("Mot de passe", "Password")
         self.fields["password2"].label = tr_text("Confirmation du mot de passe", "Confirm password")
 
@@ -92,20 +83,13 @@ class SignUpForm(UserCreationForm):
 class InvitationForm(forms.ModelForm):
     class Meta:
         model = Invitation
-        fields = ["guest_name", "seat_location", "welcome_message"]
+        fields = ["guest_name", "seat_location"]
         widgets = {
             "guest_name": forms.TextInput(
                 attrs={"class": "form-control", "placeholder": "Ex. Couple Kasongo"}
             ),
             "seat_location": forms.TextInput(
                 attrs={"class": "form-control", "placeholder": "Table 8, rangee B"}
-            ),
-            "welcome_message": forms.Textarea(
-                attrs={
-                    "class": "form-control",
-                    "rows": 4,
-                    "placeholder": "Nous sommes heureux de vous accueillir a cette celebration.",
-                }
             ),
         }
 
@@ -118,12 +102,6 @@ class InvitationForm(forms.ModelForm):
         self.fields["seat_location"].label = tr_text("Place dans la salle", "Seat location")
         self.fields["seat_location"].widget.attrs["placeholder"] = tr_text(
             "Table 8, rangee B", "Table 8, row B"
-        )
-        self.fields["welcome_message"].label = tr_text("Message de bienvenue", "Welcome message")
-        self.fields["welcome_message"].required = False
-        self.fields["welcome_message"].widget.attrs["placeholder"] = tr_text(
-            "Nous sommes heureux de vous accueillir a cette celebration.",
-            "We are delighted to welcome you to this celebration.",
         )
 
 
@@ -295,6 +273,40 @@ class ExcelUploadForm(forms.Form):
             "Format .xlsx avec deux colonnes: nom de l'invite ou du couple, puis emplacement.",
             ".xlsx format with two columns: guest or couple name, then seat location.",
         )
+
+
+class WelcomeMessageForm(forms.ModelForm):
+    class Meta:
+        model = OrganizerProfile
+        fields = ["default_welcome_message"]
+        widgets = {
+            "default_welcome_message": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                    "placeholder": "Nous sommes heureux de vous accueillir a cette celebration.",
+                }
+            )
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["default_welcome_message"].label = tr_text(
+            "Message de bienvenue pour toutes les invitations",
+            "Welcome message for all invitations",
+        )
+        self.fields["default_welcome_message"].required = False
+
+
+class SiteRatingForm(forms.ModelForm):
+    class Meta:
+        model = SiteRating
+        fields = ["stars"]
+        widgets = {
+            "stars": forms.RadioSelect(
+                choices=[(5, "5"), (4, "4"), (3, "3"), (2, "2"), (1, "1")]
+            )
+        }
 
 
 class StyledAuthenticationForm(AuthenticationForm):

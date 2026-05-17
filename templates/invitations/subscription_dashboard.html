@@ -122,6 +122,24 @@
             <a class="button button-primary" href="{% url 'invitations:create' %}">{% tr "Creer une invitation" "Create an invitation" %}</a>
             <a class="button button-secondary" href="{% url 'invitations:list' %}">{% tr "Voir mes invites" "View my guests" %}</a>
         </div>
+
+        <div class="import-panel">
+            <div>
+                <p class="eyebrow">{% tr "Message global" "Global message" %}</p>
+                <h2>{% tr "Bienvenue pour toutes les invitations" "Welcome message for all invitations" %}</h2>
+            </div>
+            <form method="post" action="{% url 'invitations:update-welcome-message' %}" class="invitation-form">
+                {% csrf_token %}
+                <div class="field-group">
+                    <label for="{{ welcome_form.default_welcome_message.id_for_label }}">{{ welcome_form.default_welcome_message.label }}</label>
+                    {{ welcome_form.default_welcome_message }}
+                    {% if welcome_form.default_welcome_message.errors %}
+                    <div class="error-list">{{ welcome_form.default_welcome_message.errors }}</div>
+                    {% endif %}
+                </div>
+                <button class="button button-secondary" type="submit">{% tr "Enregistrer ce message" "Save this message" %}</button>
+            </form>
+        </div>
         {% endif %}
     </section>
 

@@ -30,9 +30,9 @@ from django.views.generic import CreateView, DetailView, ListView, TemplateView,
 from openpyxl import Workbook, load_workbook
 from PIL import Image, ImageDraw, ImageFont
 
-from .forms import AdminSupportReplyForm, ContactAdminForm, ContactAdminReplyForm, ExcelUploadForm, InvitationForm, PaymentInitiationForm, SignUpForm
+from .forms import AdminSupportReplyForm, ContactAdminForm, ContactAdminReplyForm, ExcelUploadForm, InvitationForm, PaymentInitiationForm, SignUpForm, SiteRatingForm, WelcomeMessageForm
 from .localization import tr_text
-from .models import Invitation, OrganizerProfile, PaymentTransaction, SiteVisit, Subscription, SupportMessage
+from .models import Invitation, OrganizerProfile, PaymentTransaction, SiteRating, SiteVisit, Subscription, SupportMessage
 
 LANGUAGE_SESSION_KEY = "django_language"
 
@@ -122,6 +122,8 @@ def _ensure_invitation_qr(invitation):
 
 
 def _build_default_invitation_message(profile, guest_name):
+    if profile.default_welcome_message.strip():
+        return profile.default_welcome_message.strip()
     event_label = profile.get_event_label()
     return tr_text(
         f"{guest_name}, bienvenue a notre {event_label.lower()}. Nous serons heureux de partager ce moment avec vous.",
@@ -280,6 +282,12 @@ def build_staff_stats():
     }
 
 
+def _connected_profiles_queryset():
+    return OrganizerProfile.objects.select_related("user").filter(
+        last_seen_at__gte=timezone.now() - timedelta(minutes=5)
+    ).order_by("-last_seen_at")
+
+
 def create_invitations_from_workbook(profile, excel_file):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as temp_file:
         for chunk in excel_file.chunks():
@@ -332,11 +340,14 @@ class HomeView(TemplateView):
             profile = self.request.user.organizer_profile
             invitations = Invitation.objects.filter(organizer=profile)
             subscription = profile.active_subscription
+            user_rating = getattr(profile, "site_rating", None)
             context.update(
                 {
                     "profile": profile,
                     "subscription": subscription,
                     "invitations": invitations[:12],
+                    "user_rating": user_rating.stars if user_rating else 0,
+                    "rating_form": SiteRatingForm(initial={"stars": user_rating.stars if user_rating else 5}),
                     "stats": {
                         "total": invitations.count(),
                         "printed": invitations.exclude(printed_at__isnull=True).count(),
@@ -376,10 +387,10 @@ class SignUpView(CreateView):
             ceremony_type=form.cleaned_data["ceremony_type"],
             planned_invitations=form.cleaned_data["planned_invitations"],
             phone_number=form.cleaned_data["phone_number"],
-            preferred_language=form.cleaned_data["preferred_language"],
+            preferred_language=OrganizerProfile.LANG_FR,
         )
         _build_subscription(profile, form.cleaned_data["provider"])
-        language = form.cleaned_data["preferred_language"][:2]
+        language = OrganizerProfile.LANG_FR
         login(self.request, self.object)
         self.request.session[LANGUAGE_SESSION_KEY] = language
         translation.activate(language)
@@ -426,6 +437,7 @@ class SubscriptionDashboardView(LoginRequiredMixin, TemplateView):
                 "active_subscription": profile.active_subscription,
                 "payments": payments,
                 "show_payment_form": show_payment_form,
+                "welcome_form": WelcomeMessageForm(instance=profile),
                 "payment_form": PaymentInitiationForm(
                     initial={
                         "planned_invitations": profile.planned_invitations,
@@ -613,7 +625,8 @@ class StaffReportView(StaffRequiredMixin, TemplateView):
         transactions = PaymentTransaction.objects.select_related(
             "subscription", "subscription__organizer", "subscription__organizer__user"
         )[:20]
-        support_messages = SupportMessage.objects.select_related("organizer", "organizer__user", "sender_user")[:12]
+        support_messages = SupportMessage.objects.select_related("organizer", "organizer__user", "sender_user").order_by("-created_at")[:12]
+        connected_profiles = _connected_profiles_queryset()
         chart_data = build_staff_stats()
         context.update(
             {
@@ -621,6 +634,7 @@ class StaffReportView(StaffRequiredMixin, TemplateView):
                 "subscriptions": subscriptions,
                 "transactions": transactions,
                 "support_messages": support_messages,
+                "connected_profiles": connected_profiles,
                 "chart_data": chart_data,
                 "totals": {
                     "users": User.objects.count(),
@@ -632,6 +646,7 @@ class StaffReportView(StaffRequiredMixin, TemplateView):
                     "revenue_month": chart_data["revenue"][0]["total"] if chart_data["revenue"] else 0,
                     "site_hits": chart_data["visit_totals"]["total_hits"],
                     "unique_visitors": chart_data["visit_totals"]["unique_visitors"],
+                    "connected_users": connected_profiles.count(),
                 },
             }
         )
@@ -694,7 +709,7 @@ class ContactAdminView(LoginRequiredMixin, TemplateView):
                 body,
                 settings.DEFAULT_FROM_EMAIL,
                 [settings.ADMIN_CONTACT_EMAIL],
-                fail_silently=False,
+                fail_silently=True,
             )
             SupportMessage.objects.create(
                 organizer=profile,
@@ -744,7 +759,7 @@ class ContactAdminReplyView(LoginRequiredMixin, View):
             form.cleaned_data["message"],
             settings.DEFAULT_FROM_EMAIL,
             [settings.ADMIN_CONTACT_EMAIL],
-            fail_silently=False,
+            fail_silently=True,
         )
         messages.success(request, "Votre reponse a ete envoyee a l'administration.")
         return redirect("invitations:contact-admin")
@@ -772,7 +787,7 @@ class StaffReplySupportView(StaffRequiredMixin, View):
             form.cleaned_data["message"],
             settings.DEFAULT_FROM_EMAIL,
             [profile.user.email] if profile.user.email else [settings.ADMIN_CONTACT_EMAIL],
-            fail_silently=False,
+            fail_silently=True,
         )
         messages.success(request, "La reponse a ete enregistree et envoyee.")
         return redirect("invitations:staff-report")
@@ -844,6 +859,53 @@ def staff_support_feed(request):
             "latest_timestamp": latest,
         }
     )
+
+
+@login_required
+@require_POST
+def update_welcome_message(request):
+    profile = request.user.organizer_profile
+    form = WelcomeMessageForm(request.POST, instance=profile)
+    if form.is_valid():
+        form.save()
+        messages.success(
+            request,
+            tr_text(
+                "Le message de bienvenue global a ete enregistre.",
+                "The global welcome message has been saved.",
+            ),
+        )
+    else:
+        messages.error(
+            request,
+            tr_text(
+                "Merci de verifier le message de bienvenue.",
+                "Please review the welcome message.",
+            ),
+        )
+    return redirect("invitations:subscription")
+
+
+@login_required
+@require_POST
+def submit_site_rating(request):
+    profile = request.user.organizer_profile
+    form = SiteRatingForm(request.POST)
+    if form.is_valid():
+        SiteRating.objects.update_or_create(
+            organizer=profile,
+            defaults={"stars": form.cleaned_data["stars"]},
+        )
+        messages.success(
+            request,
+            tr_text("Merci pour votre note.", "Thank you for your rating."),
+        )
+    else:
+        messages.error(
+            request,
+            tr_text("La note envoyee est invalide.", "The submitted rating is invalid."),
+        )
+    return redirect("invitations:home")
 
 
 @login_required

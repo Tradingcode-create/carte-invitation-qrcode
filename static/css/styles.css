@@ -106,6 +106,7 @@ p {
     border-radius: 50%;
     background: #14a44d;
     box-shadow: 0 0 0 4px rgba(20, 164, 77, 0.16);
+    animation: pulse-online 1s infinite ease-in-out;
 }
 
 .nav-links form {
@@ -679,6 +680,45 @@ p {
 .ticket-message p,
 .ticket-stub-copy p {
     margin: 0;
+}
+
+.star-rating-form {
+    display: grid;
+    gap: 1rem;
+}
+
+.star-rating-inputs {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.star-option {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.star-option input {
+    position: absolute;
+    opacity: 0;
+}
+
+.star-visual {
+    font-size: 2rem;
+    color: #c67d2d;
+    cursor: pointer;
+}
+
+.star-option input:checked + .star-visual {
+    transform: scale(1.08);
+}
+
+@keyframes pulse-online {
+    0% { opacity: 0.5; transform: scale(0.92); }
+    50% { opacity: 1; transform: scale(1.1); }
+    100% { opacity: 0.5; transform: scale(0.92); }
 }
 
 .about-card {

@@ -31,6 +31,8 @@ from .views import (
     set_language_preference,
     shared_invitation_qr_preview,
     start_payment,
+    submit_site_rating,
+    update_welcome_message,
 )
 
 
@@ -42,10 +44,12 @@ urlpatterns = [
     path("langue/", set_language_preference, name="set-language"),
     path("inscription/", SignUpView.as_view(), name="signup"),
     path("abonnement/", SubscriptionDashboardView.as_view(), name="subscription"),
+    path("abonnement/message-bienvenue/", update_welcome_message, name="update-welcome-message"),
     path("contact-admin/", ContactAdminView.as_view(), name="contact-admin"),
     path("contact-admin/repondre/", ContactAdminReplyView.as_view(), name="contact-admin-reply"),
     path("contact-admin/thread/", contact_admin_thread_data, name="contact-admin-thread"),
     path("notifications/poll/", notifications_poll, name="notifications-poll"),
+    path("notation/", submit_site_rating, name="submit-rating"),
     path("staff/rapport/", StaffReportView.as_view(), name="staff-report"),
     path("staff/rapport/excel/", StaffReportExcelView.as_view(), name="staff-report-excel"),
     path("staff/support/feed/", staff_support_feed, name="staff-support-feed"),
