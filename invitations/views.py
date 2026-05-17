@@ -36,6 +36,9 @@ from .models import Invitation, OrganizerProfile, PaymentTransaction, SiteRating
 
 LANGUAGE_SESSION_KEY = "django_language"
 
+#------
+
+
 
 def _combine_limits(previous_subscription, new_limit):
     if not previous_subscription or previous_subscription.invitation_limit is None or new_limit is None:
