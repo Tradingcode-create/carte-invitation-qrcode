@@ -28,52 +28,56 @@
         {% endif %}
     </div>
 
-    <article class="invitation-sheet invitation-{{ invitation.event_type }}">
-        <div class="sheet-header">
-            <div>
-                <p class="eyebrow">{% tr "Invitation personnalisee" "Custom invitation" %}</p>
-                <h1>{{ invitation.event_label }}</h1>
+    <article class="invitation-ticket invitation-{{ invitation.event_type }}">
+        <section class="ticket-main">
+            <div class="ticket-topline">
+                <span class="badge">{% tr "Billet invitation" "Invitation pass" %}</span>
+                <span class="ticket-code">{{ invitation.slug|upper }}</span>
             </div>
-            <span class="badge">{% if invitation.is_locked %}{% tr "Verrouillee" "Locked" %}{% else %}{% tr "Editable" "Editable" %}{% endif %}</span>
-        </div>
-
-        <div class="sheet-body">
-            <section class="sheet-copy">
-                <p class="lead">{{ invitation.guest_name }}</p>
-                <p class="sheet-text">
-                    {% tr "Vous etes cordialement invite a cette ceremonie. Votre place reservee est:" "You are warmly invited to this ceremony. Your reserved seat is:" %}
-                    <strong>{{ invitation.seat_location }}</strong>.
-                </p>
-                <div class="meta-grid">
-                    <div>
-                        <span>{% tr "Type" "Type" %}</span>
-                        <strong>{{ invitation.event_label }}</strong>
-                    </div>
-                    <div>
-                        <span>{% tr "Invite" "Guest" %}</span>
-                        <strong>{{ invitation.guest_name }}</strong>
-                    </div>
-                    <div>
-                        <span>{% tr "Place" "Seat" %}</span>
-                        <strong>{{ invitation.seat_location }}</strong>
-                    </div>
-                    <div>
-                        <span>{% tr "Partage WhatsApp" "WhatsApp share" %}</span>
-                        <strong>{% if invitation.whatsapp_shared_at %}{% tr "Oui" "Yes" %}{% else %}{% tr "Non" "No" %}{% endif %}</strong>
-                    </div>
+            <div class="ticket-header">
+                <div>
+                    <p class="eyebrow">{% tr "Acces evenement" "Event access" %}</p>
+                    <h1>{{ invitation.event_label }}</h1>
                 </div>
-            </section>
+                <span class="badge">{% if invitation.is_locked %}{% tr "Verrouillee" "Locked" %}{% else %}{% tr "Active" "Active" %}{% endif %}</span>
+            </div>
+            <div class="ticket-grid">
+                <div>
+                    <span class="ticket-label">{% tr "Invite" "Guest" %}</span>
+                    <strong class="ticket-value">{{ invitation.guest_name }}</strong>
+                </div>
+                <div>
+                    <span class="ticket-label">{% tr "Place" "Seat" %}</span>
+                    <strong class="ticket-value">{{ invitation.seat_location }}</strong>
+                </div>
+                <div>
+                    <span class="ticket-label">{% tr "Organisateur" "Organizer" %}</span>
+                    <strong class="ticket-value">{{ invitation.organizer.user.get_full_name|default:invitation.organizer.user.username }}</strong>
+                </div>
+                <div>
+                    <span class="ticket-label">{% tr "WhatsApp" "WhatsApp" %}</span>
+                    <strong class="ticket-value">{% if invitation.whatsapp_shared_at %}{% tr "Partage" "Shared" %}{% else %}{% tr "Non partage" "Not shared" %}{% endif %}</strong>
+                </div>
+            </div>
+            <div class="ticket-message">
+                <span class="ticket-label">{% tr "Message de bienvenue" "Welcome message" %}</span>
+                <p>{% if invitation.welcome_message %}{{ invitation.welcome_message }}{% else %}{% tr "Nous sommes heureux de vous accueillir parmi nous." "We are delighted to welcome you among us." %}{% endif %}</p>
+            </div>
+        </section>
 
-            <aside class="qr-panel">
-                {% if invitation.qr_code %}
-                <img src="{{ invitation.qr_code.url }}" alt="{% tr 'QR code de l invitation' 'Invitation QR code' %}">
-                {% endif %}
-                <p>{% tr "Le QR code est sauvegardable apres paiement confirme." "The QR code can be saved after payment confirmation." %}</p>
+        <aside class="ticket-stub">
+            <p class="eyebrow">{% tr "Controle" "Control" %}</p>
+            {% if invitation.qr_code %}
+            <img src="{{ invitation.qr_code.url }}" alt="{% tr 'QR code de l invitation' 'Invitation QR code' %}">
+            {% endif %}
+            <div class="ticket-stub-copy">
+                <p><strong>{{ invitation.guest_name }}</strong></p>
+                <p>{{ invitation.seat_location }}</p>
                 {% if invitation.printed_at %}
                 <p>{% tr "Imprimee le" "Printed on" %} {{ invitation.printed_at|date:"d/m/Y H:i" }}</p>
                 {% endif %}
-            </aside>
-        </div>
+            </div>
+        </aside>
     </article>
 </main>
 

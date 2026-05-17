@@ -2,12 +2,14 @@ import hashlib
 import hmac
 import io
 import json
+import os
 import secrets
 import uuid
 from decimal import Decimal
 
 import qrcode
 from django.contrib.auth.models import User
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
 from django.db import models
@@ -255,6 +257,23 @@ class SupportMessage(models.Model):
         return tr_text("Administration", "Administration") if self.sender_type == self.SENDER_ADMIN else tr_text("Vous", "You")
 
 
+class SiteVisit(models.Model):
+    session_key = models.CharField(max_length=80, db_index=True)
+    path = models.CharField(max_length=255)
+    ip_address = models.CharField(max_length=64, blank=True)
+    user_agent = models.CharField(max_length=255, blank=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="site_visits")
+    first_seen_at = models.DateTimeField(auto_now_add=True)
+    last_seen_at = models.DateTimeField(auto_now=True)
+    hits = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        ordering = ["-last_seen_at"]
+
+    def __str__(self):
+        return f"{self.path} - {self.session_key}"
+
+
 class Invitation(models.Model):
     organizer = models.ForeignKey(
         OrganizerProfile, on_delete=models.CASCADE, related_name="invitations"
@@ -264,6 +283,7 @@ class Invitation(models.Model):
     )
     guest_name = models.CharField("Nom de l'invite", max_length=140)
     seat_location = models.CharField("Place dans la salle", max_length=140)
+    welcome_message = models.TextField("Message de bienvenue", blank=True)
     qr_code = models.ImageField(upload_to="qrcodes/", blank=True)
     slug = models.SlugField(max_length=180, unique=True, blank=True)
     share_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
@@ -291,10 +311,15 @@ class Invitation(models.Model):
         return bool(self.printed_at or self.whatsapp_shared_at)
 
     def get_payload(self):
+        welcome_message = self.welcome_message.strip() or tr_text(
+            "Bienvenue a cette ceremonie.",
+            "Welcome to this event.",
+        )
         payload = {
             "ceremonie": self.event_label,
             "invite": self.guest_name,
             "place": self.seat_location,
+            "message": welcome_message,
             "organisateur": self.organizer.user.get_full_name() or self.organizer.user.username,
         }
         return json.dumps(payload, ensure_ascii=False, indent=2)
@@ -310,15 +335,26 @@ class Invitation(models.Model):
         return candidate
 
     def _build_qr_code(self):
+        os.makedirs(os.path.join(settings.MEDIA_ROOT, "qrcodes"), exist_ok=True)
         qr = qrcode.QRCode(version=1, box_size=10, border=2)
         qr.add_data(self.get_payload())
         qr.make(fit=True)
-        image = qr.make_image(fill_color="#10233f", back_color="white")
+        image = qr.make_image(fill_color="#10233f", back_color="white").convert("RGB")
 
         buffer = io.BytesIO()
         image.save(buffer, format="PNG")
         filename = f"{self.slug or slugify(self.guest_name) or 'invite'}.png"
         return filename, ContentFile(buffer.getvalue())
+
+    def ensure_qr_code(self):
+        if not self.qr_code or not self.qr_code.name:
+            self.save()
+            return
+        storage = self.qr_code.storage
+        if not storage.exists(self.qr_code.name):
+            filename, qr_content = self._build_qr_code()
+            self.qr_code.save(filename, qr_content, save=False)
+            super().save(update_fields=["qr_code", "updated_at"])
 
     def mark_printed(self):
         if not self.printed_at:

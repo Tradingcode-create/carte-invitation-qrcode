@@ -9,7 +9,7 @@
         <div class="section-head">
             <div>
                 <p class="eyebrow">{% if form.instance.pk %}{% tr "Modification" "Edit" %}{% else %}{% tr "Creation" "Create" %}{% endif %}</p>
-                <h1>{% if form.instance.pk %}{% tr "Modifier un invite" "Edit a guest" %}{% else %}{% tr "Ajouter un invite" "Add a guest" %}{% endif %}</h1>
+                <h1>{% if form.instance.pk %}{% tr "Modifier un billet d invitation" "Edit invitation boarding pass" %}{% else %}{% tr "Creer un billet d invitation" "Create an invitation boarding pass" %}{% endif %}</h1>
             </div>
             <a class="button button-secondary" href="{% url 'invitations:list' %}">{% tr "Retour a la liste" "Back to list" %}</a>
         </div>
@@ -26,20 +26,20 @@
             </div>
             {% endfor %}
             <button class="button button-primary" type="submit">
-                {% if form.instance.pk %}{% tr "Enregistrer les modifications" "Save changes" %}{% else %}{% tr "Generer l'invitation" "Generate invitation" %}{% endif %}
+                {% if form.instance.pk %}{% tr "Enregistrer les modifications" "Save changes" %}{% else %}{% tr "Generer l invitation" "Generate invitation" %}{% endif %}
             </button>
         </form>
     </section>
 
     <aside class="preview-panel">
-        <p class="eyebrow">{% tr "Regle metier" "Business rule" %}</p>
+        <p class="eyebrow">{% tr "Nouveau format" "New format" %}</p>
         <div class="preview-card">
-            <span class="badge">{% tr "Edition minimale" "Minimal editing" %}</span>
-            <h2>{% tr "Nom + place uniquement" "Name + seat only" %}</h2>
+            <span class="badge">{% tr "Design billet" "Boarding pass design" %}</span>
+            <h2>{% tr "Style billet d avion" "Airline ticket style" %}</h2>
             <p class="preview-copy">
-                {% tr "Le type de ceremonie vient de votre abonnement. Une fois l'invitation imprimee ou partagee via WhatsApp, elle devient automatiquement non modifiable." "The ceremony type comes from your subscription. Once printed or shared on WhatsApp, the invitation becomes automatically locked." %}
+                {% tr "Le nom de l invite, sa place, le QR code et votre message de bienvenue seront presentes comme un billet premium, pret a imprimer ou a partager." "The guest name, seat, QR code, and your welcome message will be displayed like a premium boarding pass, ready to print or share." %}
             </p>
-            <div class="preview-seat">{% tr "QR code telechargeable seulement apres paiement valide." "QR code downloadable only after successful payment." %}</div>
+            <div class="preview-seat">{% tr "Le QR code sera regenere automatiquement si le fichier manque." "The QR code will be regenerated automatically if the file is missing." %}</div>
         </div>
     </aside>
 </main>

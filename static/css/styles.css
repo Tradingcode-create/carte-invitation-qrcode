@@ -141,6 +141,12 @@ p {
     gap: 1.5rem;
 }
 
+.site-footer {
+    text-align: center;
+    padding: 20px;
+    margin-top: 50px;
+}
+
 .hero-card,
 .form-panel,
 .preview-panel,
@@ -158,6 +164,10 @@ p {
     gap: 1.5rem;
     border-radius: var(--radius-xl);
     padding: 2rem;
+}
+
+.hero-card-wide {
+    grid-template-columns: 1.15fr 0.85fr;
 }
 
 .hero-copy h1,
@@ -539,6 +549,119 @@ p {
     height: auto;
 }
 
+.invitation-ticket {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: 0;
+    overflow: hidden;
+    border-radius: 34px;
+    box-shadow: var(--shadow);
+    border: 1px solid rgba(255, 255, 255, 0.68);
+    background: linear-gradient(140deg, #fffdfa, #f2e7d8);
+}
+
+.ticket-main {
+    padding: 2rem;
+    background:
+        radial-gradient(circle at top left, rgba(198, 125, 45, 0.18), transparent 23%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 242, 232, 0.98));
+}
+
+.ticket-stub {
+    position: relative;
+    padding: 2rem 1.4rem;
+    background:
+        radial-gradient(circle at top, rgba(15, 93, 94, 0.18), transparent 22%),
+        linear-gradient(180deg, #153f65, #0f2942);
+    color: #f6f0e6;
+    display: grid;
+    align-content: start;
+    justify-items: center;
+    gap: 1rem;
+}
+
+.ticket-stub::before,
+.ticket-stub::after {
+    content: "";
+    position: absolute;
+    left: -18px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #efe6d7;
+}
+
+.ticket-stub::before {
+    top: 68px;
+}
+
+.ticket-stub::after {
+    bottom: 68px;
+}
+
+.ticket-stub img {
+    width: min(100%, 210px);
+    padding: 0.75rem;
+    border-radius: 24px;
+    background: white;
+}
+
+.ticket-topline,
+.ticket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.ticket-header {
+    margin-top: 1.3rem;
+}
+
+.ticket-code {
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    color: var(--accent-dark);
+}
+
+.ticket-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    margin: 1.8rem 0 1.2rem;
+}
+
+.ticket-grid > div,
+.ticket-message {
+    padding: 1rem 1.1rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.86);
+}
+
+.ticket-label {
+    display: block;
+    color: var(--muted);
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.45rem;
+}
+
+.ticket-value {
+    display: block;
+    font-size: 1.2rem;
+}
+
+.ticket-message p,
+.ticket-stub-copy p {
+    margin: 0;
+}
+
+.about-card {
+    align-self: stretch;
+}
+
 @media (max-width: 920px) {
     .page-shell {
         width: min(100% - 1rem, 1180px);
@@ -567,7 +690,16 @@ p {
         grid-template-columns: 1fr;
     }
 
+    .hero-card-wide,
+    .invitation-ticket {
+        grid-template-columns: 1fr;
+    }
+
     .split-fields {
+        grid-template-columns: 1fr;
+    }
+
+    .ticket-grid {
         grid-template-columns: 1fr;
     }
 

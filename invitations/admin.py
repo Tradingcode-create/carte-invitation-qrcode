@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.models import User
 
-from .models import Invitation, OrganizerProfile, PaymentTransaction, Subscription, SupportMessage
+from .models import Invitation, OrganizerProfile, PaymentTransaction, SiteVisit, Subscription, SupportMessage
 
 
 @admin.register(OrganizerProfile)
@@ -64,6 +64,13 @@ class SupportMessageAdmin(admin.ModelAdmin):
     list_filter = ("sender_type", "is_read_by_admin", "is_read_by_user", "created_at")
     search_fields = ("subject", "message", "organizer__user__username", "organizer__user__email")
     autocomplete_fields = ("organizer", "sender_user")
+
+
+@admin.register(SiteVisit)
+class SiteVisitAdmin(admin.ModelAdmin):
+    list_display = ("path", "session_key", "user", "hits", "last_seen_at")
+    list_filter = ("last_seen_at",)
+    search_fields = ("path", "session_key", "ip_address", "user__username", "user__email")
 
 
 admin.site.unregister(User)

@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    AboutView,
     ContactAdminReplyView,
     ContactAdminView,
     HomeView,
@@ -15,6 +16,8 @@ from .views import (
     StaffReportExcelView,
     StaffReportView,
     StaffReplySupportView,
+    contact_admin_thread_data,
+    staff_support_feed,
     StaffToggleSupportView,
     SubscriptionDashboardView,
     download_excel_template,
@@ -33,14 +36,17 @@ app_name = "invitations"
 
 urlpatterns = [
     path("", HomeView.as_view(), name="home"),
+    path("a-propos/", AboutView.as_view(), name="about"),
     path("langue/", set_language_preference, name="set-language"),
     path("inscription/", SignUpView.as_view(), name="signup"),
     path("abonnement/", SubscriptionDashboardView.as_view(), name="subscription"),
     path("contact-admin/", ContactAdminView.as_view(), name="contact-admin"),
     path("contact-admin/repondre/", ContactAdminReplyView.as_view(), name="contact-admin-reply"),
+    path("contact-admin/thread/", contact_admin_thread_data, name="contact-admin-thread"),
     path("notifications/poll/", notifications_poll, name="notifications-poll"),
     path("staff/rapport/", StaffReportView.as_view(), name="staff-report"),
     path("staff/rapport/excel/", StaffReportExcelView.as_view(), name="staff-report-excel"),
+    path("staff/support/feed/", staff_support_feed, name="staff-support-feed"),
     path("staff/rapport/repondre/<int:organizer_id>/", StaffReplySupportView.as_view(), name="staff-reply-support"),
     path("staff/rapport/toggle-support/<int:organizer_id>/", StaffToggleSupportView.as_view(), name="staff-toggle-support"),
     path("paiement/demarrer/", start_payment, name="start-payment"),

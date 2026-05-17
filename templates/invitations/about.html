@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load bilingual %}
+
+{% block title %}{% tr "A propos" "About" %} | EventQr{% endblock %}
+
+{% block content %}
+<main class="dashboard">
+    <section class="hero-card hero-card-wide">
+        <div class="hero-copy">
+            <p class="eyebrow">EventQr</p>
+            <h1>{% tr "Une invitation moderne, elegante et facile a partager." "A modern, elegant invitation experience that is easy to share." %}</h1>
+            <p class="hero-text">
+                {% tr "EventQr aide les organisateurs de mariages, anniversaires et concerts a creer des invitations imprimees avec QR code, suivre leurs invites et simplifier l'accueil le jour de l'evenement." "EventQr helps wedding, birthday, and concert organizers create printable QR invitations, track guests, and simplify reception on the event day." %}
+            </p>
+        </div>
+        <div class="preview-card about-card">
+            <span class="badge">{% tr "Direction" "Leadership" %}</span>
+            <h2>{{ ceo_name }}</h2>
+            <p class="preview-copy">{% tr "CEO et createur du site" "CEO and creator of the site" %}</p>
+            <div class="preview-seat">
+                WhatsApp: <a href="https://wa.me/243974073701">{{ ceo_phone }}</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="listing-section">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow">{% tr "Bien fonde" "Why it matters" %}</p>
+                <h2>{% tr "Pourquoi utiliser EventQr" "Why use EventQr" %}</h2>
+            </div>
+        </div>
+        <div class="card-grid">
+            <article class="invite-card">
+                <h3>{% tr "Gain de temps" "Time saving" %}</h3>
+                <p>{% tr "Les invitations peuvent etre creees a l'unite ou importees par fichier Excel en quelques minutes." "Invitations can be created one by one or imported from Excel in just a few minutes." %}</p>
+            </article>
+            <article class="invite-card">
+                <h3>{% tr "Meilleur accueil" "Better reception" %}</h3>
+                <p>{% tr "Chaque invite dispose d'un QR code et d'une place clairement indiquee pour fluidifier l'entree dans la salle." "Each guest has a QR code and clearly assigned seat to make entry smoother." %}</p>
+            </article>
+            <article class="invite-card">
+                <h3>{% tr "Partage simple" "Easy sharing" %}</h3>
+                <p>{% tr "Le billet d'invitation peut etre imprime, partage sur WhatsApp, telecharge en JPEG ou en QR code." "The invitation pass can be printed, shared on WhatsApp, downloaded as JPEG, or saved as a QR code." %}</p>
+            </article>
+        </div>
+    </section>
+</main>
+{% endblock %}

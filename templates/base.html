@@ -5,123 +5,115 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}EventQr{% endblock %}</title>
-
     <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/styles.css' %}">
 </head>
-
 <body>
-
 <header class="site-header no-print">
-
     <div class="page-shell nav-row">
-
         <a class="brand" href="{% url 'invitations:home' %}">
             <span class="brand-mark">EQ</span>
             <span>EventQr</span>
         </a>
 
         <nav class="nav-links">
-
+            <a href="{% url 'invitations:about' %}">{% tr "A propos" "About" %}</a>
             {% if user.is_authenticated %}
-
-                <a href="{% url 'invitations:subscription' %}">
-                    {% tr "Abonnement" "Subscription" %}
-                </a>
-
-                <a href="{% url 'invitations:list' %}">
-                    {% tr "Invites" "Guests" %}
-                </a>
-
-                <a href="{% url 'invitations:create' %}">
-                    {% tr "Nouvelle invitation" "New invitation" %}
-                </a>
-
-                <a href="{% url 'invitations:contact-admin' %}">
-                    {% tr "Contacter l'admin" "Contact admin" %}
-                </a>
-
-                {% if user.is_staff %}
-
-                    <a href="{% url 'invitations:staff-report' %}">
-                        {% tr "Rapport" "Report" %}
-                    </a>
-
-                    <a href="/admin/">
-                        {% tr "Admin" "Admin" %}
-                    </a>
-
-                {% endif %}
-
-                <form method="post" action="{% url 'logout' %}">
-                    {% csrf_token %}
-
-                    <button class="button button-secondary button-small"
-                            type="submit">
-
-                        {% tr "Deconnexion" "Log out" %}
-                    </button>
-                </form>
-
-            {% else %}
-
-                <a href="{% url 'invitations:signup' %}">
-                    {% tr "Inscription" "Sign up" %}
-                </a>
-
-                <a href="{% url 'login' %}">
-                    {% tr "Connexion" "Log in" %}
-                </a>
-
+            <a href="{% url 'invitations:subscription' %}">{% tr "Abonnement" "Subscription" %}</a>
+            <a href="{% url 'invitations:list' %}">{% tr "Invites" "Guests" %}</a>
+            <a href="{% url 'invitations:create' %}">{% tr "Nouvelle invitation" "New invitation" %}</a>
+            <a href="{% url 'invitations:contact-admin' %}">{% tr "Contacter l'admin" "Contact admin" %}</a>
+            {% if user.is_staff %}
+            <a href="{% url 'invitations:staff-report' %}">{% tr "Rapport" "Report" %}</a>
+            <a href="/admin/">{% tr "Admin" "Admin" %}</a>
             {% endif %}
-
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button class="button button-secondary button-small" type="submit">{% tr "Deconnexion" "Log out" %}</button>
+            </form>
+            {% else %}
+            <a href="{% url 'invitations:signup' %}">{% tr "Inscription" "Sign up" %}</a>
+            <a href="{% url 'login' %}">{% tr "Connexion" "Log in" %}</a>
+            {% endif %}
+            <form method="post" action="{% url 'invitations:set-language' %}" class="language-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <select class="form-control language-select" name="language" onchange="this.form.submit()">
+                    <option value="fr" {% if LANGUAGE_CODE|slice:":2" == "fr" %}selected{% endif %}>FR</option>
+                    <option value="en" {% if LANGUAGE_CODE|slice:":2" == "en" %}selected{% endif %}>EN</option>
+                </select>
+            </form>
         </nav>
-
     </div>
-
 </header>
 
 <div class="page-shell">
-
     {% if messages %}
-
     <section class="message-stack no-print">
-
         {% for message in messages %}
-
-        <article class="message message-{{ message.tags|default:'info' }}">
-            {{ message }}
-        </article>
-
+        <article class="message message-{{ message.tags|default:'info' }}">{{ message }}</article>
         {% endfor %}
-
     </section>
-
     {% endif %}
 
     {% block content %}{% endblock %}
-
 </div>
 
-<footer style="text-align:center; padding:20px; margin-top:50px;">
-
+<footer class="site-footer">
     <p>
-        {% tr "Copyright" "Copyright" %}
-        2025 - {% now "Y" %}
-
-        <a href="https://carte-invitation-qrcode.onrender.com">
-            Tcode
-        </a>
-
-        | RDC
+        {% tr "Copyright" "Copyright" %} 2025 - {% now "Y" %}
+        <a href="https://carte-invitation-qrcode.onrender.com">EventQr</a>
+        | {% tr "CEO et createur" "CEO and creator" %}: Tresor | WhatsApp:
+        <a href="https://wa.me/243974073701">+243974073701</a>
     </p>
-
 </footer>
 
+{% if user.is_authenticated %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    let previousUnread = null;
+
+    function playIncomingTone() {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(920, ctx.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(700, ctx.currentTime + 0.22);
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+        oscillator.connect(gain);
+        gain.connect(ctx.destination);
+        oscillator.start();
+        oscillator.stop(ctx.currentTime + 0.36);
+    }
+
+    async function pollNotifications() {
+        try {
+            const response = await fetch("{% url 'invitations:notifications-poll' %}", {
+                headers: {"X-Requested-With": "XMLHttpRequest"}
+            });
+            if (!response.ok) return;
+            const data = await response.json();
+            if (previousUnread !== null && data.unread_count > previousUnread) {
+                playIncomingTone();
+            }
+            previousUnread = data.unread_count;
+        } catch (error) {
+        }
+    }
+
+    pollNotifications();
+    setInterval(pollNotifications, 5000);
+});
+</script>
+{% endif %}
+{% block extra_js %}{% endblock %}
 </body>
 </html>

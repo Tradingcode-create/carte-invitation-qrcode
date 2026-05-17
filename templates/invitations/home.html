@@ -1,205 +1,83 @@
 {% extends "base.html" %}
+{% load bilingual %}
 
-{% block title %}InviteQR{% endblock %}
+{% block title %}EventQr{% endblock %}
 
 {% block content %}
 <main class="dashboard">
-
     {% if user.is_authenticated and profile %}
-
     <section class="hero-card">
         <div class="hero-copy">
-            <p class="eyebrow">Tableau de bord</p>
-
-            <h1>
-                Vos invitations {{ profile.get_event_label|lower }}
-                sont sous contrôle.
-            </h1>
-
+            <p class="eyebrow">{% tr "Tableau de bord" "Dashboard" %}</p>
+            <h1>{% tr "Vos invitations sont pretes a embarquer." "Your invitations are ready for boarding." %}</h1>
             <p class="hero-text">
-                Votre formule active pilote le quota,
-                le paiement, le téléchargement du QR code
-                et le verrouillage après impression
-                ou partage WhatsApp.
+                {% tr "Gerez vos invites, votre quota, vos QR codes et vos billets d invitation depuis un seul espace clair et moderne." "Manage guests, quota, QR codes, and invitation passes from one clear, modern space." %}
             </p>
-
             <div class="action-row">
-                <a class="button button-primary"
-                   href="{% url 'invitations:create' %}">
-                    Créer une invitation
-                </a>
-
-                <a class="button button-secondary"
-                   href="{% url 'invitations:subscription' %}">
-                    Voir mon abonnement
-                </a>
+                <a class="button button-primary" href="{% url 'invitations:create' %}">{% tr "Creer une invitation" "Create an invitation" %}</a>
+                <a class="button button-secondary" href="{% url 'invitations:subscription' %}">{% tr "Voir mon abonnement" "View my subscription" %}</a>
             </div>
         </div>
-
         <div class="hero-stats">
-            <article class="stat-card">
-                <span>Total invitations</span>
-                <strong>{{ stats.total }}</strong>
-            </article>
-
-            <article class="stat-card">
-                <span>Déjà imprimées</span>
-                <strong>{{ stats.printed }}</strong>
-            </article>
-
-            <article class="stat-card">
-                <span>Partagées WhatsApp</span>
-                <strong>{{ stats.shared }}</strong>
-            </article>
-
-            <article class="stat-card">
-                <span>Quota restant</span>
-
-                <strong>
-                    {% if stats.remaining == None %}
-                        Illimité
-                    {% else %}
-                        {{ stats.remaining }}
-                    {% endif %}
-                </strong>
-            </article>
+            <article class="stat-card"><span>{% tr "Invitations" "Invitations" %}</span><strong>{{ stats.total }}</strong></article>
+            <article class="stat-card"><span>{% tr "Imprimees" "Printed" %}</span><strong>{{ stats.printed }}</strong></article>
+            <article class="stat-card"><span>{% tr "Partagees" "Shared" %}</span><strong>{{ stats.shared }}</strong></article>
+            <article class="stat-card"><span>{% tr "Restantes" "Remaining" %}</span><strong>{% if stats.remaining == None %}{% tr "Illimite" "Unlimited" %}{% else %}{{ stats.remaining }}{% endif %}</strong></article>
         </div>
     </section>
 
     <section class="listing-section">
-
         <div class="section-head">
             <div>
-                <p class="eyebrow">Abonnement</p>
+                <p class="eyebrow">{% tr "Billets recents" "Recent passes" %}</p>
                 <h2>{{ subscription.plan_label }}</h2>
             </div>
-
-            <span class="badge">
-                {{ subscription.price_usd }} USD
-            </span>
+            <span class="badge">{{ subscription.price_usd }} USD</span>
         </div>
-
         <div class="card-grid">
-
             {% for invitation in invitations %}
-
             <article class="invite-card">
-
-                <span class="badge">
-                    {{ invitation.event_label }}
-                </span>
-
+                <span class="badge">{{ invitation.event_label }}</span>
                 <h3>{{ invitation.guest_name }}</h3>
-
-                <p>
-                    Place : {{ invitation.seat_location }}
-                </p>
-
+                <p>{% tr "Place" "Seat" %}: {{ invitation.seat_location }}</p>
                 <dl>
-                    <div>
-                        <dt>Statut</dt>
-
-                        <dd>
-                            {% if invitation.is_locked %}
-                                Verrouillée
-                            {% else %}
-                                Modifiable
-                            {% endif %}
-                        </dd>
-                    </div>
-
-                    <div>
-                        <dt>Créée</dt>
-                        <dd>{{ invitation.created_at|date:"d/m/Y H:i" }}</dd>
-                    </div>
+                    <div><dt>{% tr "Billet" "Pass" %}</dt><dd>{% if invitation.is_locked %}{% tr "Fige" "Locked" %}{% else %}{% tr "Actif" "Active" %}{% endif %}</dd></div>
+                    <div><dt>QR</dt><dd>{% if invitation.qr_code %}{% tr "Pret" "Ready" %}{% else %}{% tr "A regenerer" "To regenerate" %}{% endif %}</dd></div>
                 </dl>
-
-                <a class="text-link"
-                   href="{% url 'invitations:detail' invitation.slug %}">
-                    Ouvrir l'invitation
-                </a>
-
+                <a class="text-link" href="{% url 'invitations:detail' invitation.slug %}">{% tr "Ouvrir le billet" "Open pass" %}</a>
             </article>
-
             {% empty %}
-
             <article class="empty-card">
-
-                <h3>Aucun invité pour le moment</h3>
-
-                <p>
-                    Votre abonnement est prêt.
-                    Créez votre première invitation.
-                </p>
-
-                <a class="button button-primary"
-                   href="{% url 'invitations:create' %}">
-                    Commencer
-                </a>
-
+                <h3>{% tr "Aucun invite pour le moment" "No guests yet" %}</h3>
+                <p>{% tr "Créez votre premier billet d invitation pour commencer." "Create your first invitation pass to get started." %}</p>
+                <a class="button button-primary" href="{% url 'invitations:create' %}">{% tr "Commencer" "Get started" %}</a>
             </article>
-
             {% endfor %}
-
         </div>
-
     </section>
-
     {% else %}
-
-    <section class="hero-card">
-
+    <section class="hero-card hero-card-wide">
         <div class="hero-copy">
-
-            <p class="eyebrow">InviteQR</p>
-
-            <h1>
-                Invitations élégantes,
-                QR code téléchargeable
-                et paiement Mobile Money.
-            </h1>
-
+            <p class="eyebrow">EventQr</p>
+            <h1>{% tr "Des invitations premium avec QR code et design billet." "Premium invitations with QR codes and boarding-pass design." %}</h1>
             <p class="hero-text">
-                Chaque organisateur crée son compte,
-                choisit sa cérémonie, son volume
-                d'invitations puis active son abonnement
-                via Airtel Money, Orange Money,
-                AfriMoney ou M-Pesa.
+                {% tr "Pour mariage, anniversaire et concert, EventQr vous aide a creer, imprimer, partager et suivre vos invitations depuis la RDC et partout ailleurs." "For weddings, birthdays, and concerts, EventQr helps you create, print, share, and manage invitations from the DRC and beyond." %}
             </p>
-
             <div class="action-row">
-
-                <a class="button button-primary"
-                   href="{% url 'invitations:signup' %}">
-                    Créer mon compte
-                </a>
-
-                <a class="button button-secondary"
-                   href="{% url 'login' %}">
-                    Me connecter
-                </a>
-
+                <a class="button button-primary" href="{% url 'invitations:signup' %}">{% tr "Creer mon compte" "Create my account" %}</a>
+                <a class="button button-secondary" href="{% url 'invitations:about' %}">{% tr "A propos du site" "About the site" %}</a>
             </div>
-
         </div>
-
         <div class="hero-stats">
-
             {% for plan in plans %}
-
             <article class="stat-card">
                 <span>{{ plan.name }}</span>
                 <strong>{{ plan.price }}</strong>
                 <p>{{ plan.range }}</p>
             </article>
-
             {% endfor %}
-
         </div>
-
     </section>
-
     {% endif %}
-
 </main>
 {% endblock %}

@@ -5,25 +5,39 @@
 
 {% block content %}
 <main class="print-page">
-    <article class="invitation-sheet invitation-{{ invitation.event_type }}">
-        <div class="sheet-header">
-            <div>
-                <p class="eyebrow">{% tr "Invitation partagee" "Shared invitation" %}</p>
-                <h1>{{ invitation.event_label }}</h1>
+    <article class="invitation-ticket invitation-{{ invitation.event_type }}">
+        <section class="ticket-main">
+            <div class="ticket-topline">
+                <span class="badge">{% tr "Billet partage" "Shared pass" %}</span>
+                <span class="ticket-code">{{ invitation.slug|upper }}</span>
             </div>
-            <span class="badge">{{ invitation.guest_name }}</span>
-        </div>
-        <div class="sheet-body">
-            <section class="sheet-copy">
-                <p class="lead">{{ invitation.guest_name }}</p>
-                <p class="sheet-text">{% tr "Votre place reservee est" "Your reserved seat is" %} <strong>{{ invitation.seat_location }}</strong>.</p>
-            </section>
-            <aside class="qr-panel">
-                {% if invitation.qr_code %}
-                <img src="{{ invitation.qr_code.url }}" alt="{% tr 'QR code de l invitation' 'Invitation QR code' %}">
-                {% endif %}
-            </aside>
-        </div>
+            <div class="ticket-header">
+                <div>
+                    <p class="eyebrow">{% tr "Invitation partagee" "Shared invitation" %}</p>
+                    <h1>{{ invitation.event_label }}</h1>
+                </div>
+                <span class="badge">{{ invitation.guest_name }}</span>
+            </div>
+            <div class="ticket-grid">
+                <div>
+                    <span class="ticket-label">{% tr "Invite" "Guest" %}</span>
+                    <strong class="ticket-value">{{ invitation.guest_name }}</strong>
+                </div>
+                <div>
+                    <span class="ticket-label">{% tr "Place" "Seat" %}</span>
+                    <strong class="ticket-value">{{ invitation.seat_location }}</strong>
+                </div>
+            </div>
+            <div class="ticket-message">
+                <span class="ticket-label">{% tr "Message de bienvenue" "Welcome message" %}</span>
+                <p>{% if invitation.welcome_message %}{{ invitation.welcome_message }}{% else %}{% tr "Heureux de vous compter parmi nos invites." "Happy to count you among our guests." %}{% endif %}</p>
+            </div>
+        </section>
+        <aside class="ticket-stub">
+            {% if invitation.qr_code %}
+            <img src="{{ invitation.qr_code.url }}" alt="{% tr 'QR code de l invitation' 'Invitation QR code' %}">
+            {% endif %}
+        </aside>
     </article>
 </main>
 {% endblock %}

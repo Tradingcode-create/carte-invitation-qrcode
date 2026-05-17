@@ -8,22 +8,21 @@
     <section class="hero-card">
         <div class="hero-copy">
             <p class="eyebrow">{% tr "Administration" "Administration" %}</p>
-            <h1>{% tr "Rapport global des utilisateurs et abonnements." "Global report for users and subscriptions." %}</h1>
+            <h1>{% tr "Pilotage global du site, des abonnements et des echanges." "Global monitoring of the site, subscriptions, and conversations." %}</h1>
             <p class="hero-text">
-                {% tr "Cette vue complete le panneau Django Admin. Vous pouvez imprimer, exporter et suivre les statistiques en direct." "This view complements the Django Admin panel. You can print, export, and track live statistics." %}
+                {% tr "Cette vue complete l admin Django avec les visites, les utilisateurs, les revenus et les messages support." "This view complements Django admin with visits, users, revenue, and support messages." %}
             </p>
             <div class="action-row no-print">
                 <button class="button button-primary" onclick="window.print()">{% tr "Imprimer le rapport" "Print report" %}</button>
                 <a class="button button-secondary" href="{% url 'invitations:staff-report-excel' %}">{% tr "Exporter Excel" "Export Excel" %}</a>
                 <a class="button button-secondary" href="/admin/auth/user/">{% tr "Utilisateurs" "Users" %}</a>
                 <a class="button button-secondary" href="/admin/invitations/subscription/">{% tr "Abonnements" "Subscriptions" %}</a>
-                <a class="button button-secondary" href="/admin/auth/user/add/">{% tr "Ajouter un utilisateur" "Add a user" %}</a>
             </div>
         </div>
         <div class="hero-stats">
             <article class="stat-card"><span>{% tr "Utilisateurs" "Users" %}</span><strong>{{ totals.users }}</strong></article>
-            <article class="stat-card"><span>{% tr "Organisateurs" "Organizers" %}</span><strong>{{ totals.organizers }}</strong></article>
-            <article class="stat-card"><span>{% tr "Abonnements" "Subscriptions" %}</span><strong>{{ totals.subscriptions }}</strong></article>
+            <article class="stat-card"><span>{% tr "Visites" "Visits" %}</span><strong>{{ totals.site_hits }}</strong></article>
+            <article class="stat-card"><span>{% tr "Visiteurs uniques" "Unique visitors" %}</span><strong>{{ totals.unique_visitors }}</strong></article>
             <article class="stat-card"><span>{% tr "Revenus du mois" "Monthly revenue" %}</span><strong>{{ totals.revenue_month }} USD</strong></article>
         </div>
     </section>
@@ -41,50 +40,7 @@
             <article class="chart-card"><h3>{% tr "Invitations commandees vs utilisees" "Ordered vs used invitations" %}</h3><canvas id="usage-chart" height="220"></canvas></article>
             <article class="chart-card"><h3>{% tr "Utilisateurs actifs vs non actifs" "Active vs inactive users" %}</h3><canvas id="activity-chart" height="220"></canvas></article>
             <article class="chart-card"><h3>{% tr "Revenus d abonnement du mois" "Monthly subscription revenue" %}</h3><canvas id="revenue-chart" height="220"></canvas></article>
-        </div>
-    </section>
-
-    <section class="listing-section">
-        <div class="section-head">
-            <div>
-                <p class="eyebrow">{% tr "Utilisateurs" "Users" %}</p>
-                <h2>{% tr "Profils organisateurs" "Organizer profiles" %}</h2>
-            </div>
-        </div>
-        <div class="card-grid">
-            {% for profile in profiles %}
-            <article class="invite-card">
-                <span class="badge">{{ profile.get_event_label }}</span>
-                <h3>{{ profile.user.get_full_name|default:profile.user.username }}</h3>
-                <p>{{ profile.user.email|default:"-" }}</p>
-                <dl>
-                    <div><dt>{% tr "Telephone" "Phone" %}</dt><dd>{{ profile.phone_number|default:"-" }}</dd></div>
-                    <div><dt>{% tr "Invitations prevues" "Planned invitations" %}</dt><dd>{{ profile.planned_invitations }}</dd></div>
-                </dl>
-            </article>
-            {% endfor %}
-        </div>
-    </section>
-
-    <section class="listing-section">
-        <div class="section-head">
-            <div>
-                <p class="eyebrow">{% tr "Abonnements" "Subscriptions" %}</p>
-                <h2>{% tr "Toutes les souscriptions" "All subscriptions" %}</h2>
-            </div>
-        </div>
-        <div class="card-grid">
-            {% for subscription in subscriptions %}
-            <article class="invite-card">
-                <span class="badge">{{ subscription.provider_label }}</span>
-                <h3>{{ subscription.organizer.user.username }}</h3>
-                <p>{{ subscription.plan_label }} - {{ subscription.price_usd }} USD</p>
-                <dl>
-                    <div><dt>{% tr "Statut" "Status" %}</dt><dd>{{ subscription.status_label }}</dd></div>
-                    <div><dt>{% tr "Quota" "Quota" %}</dt><dd>{% if subscription.invitation_limit %}{{ subscription.invitation_limit }}{% else %}{% tr "Illimite" "Unlimited" %}{% endif %}</dd></div>
-                </dl>
-            </article>
-            {% endfor %}
+            <article class="chart-card"><h3>{% tr "Visites sur 7 jours" "Visits over 7 days" %}</h3><canvas id="visits-chart" height="220"></canvas></article>
         </div>
     </section>
 
@@ -92,10 +48,10 @@
         <div class="section-head">
             <div>
                 <p class="eyebrow">{% tr "Support" "Support" %}</p>
-                <h2>{% tr "Messages utilisateurs" "User messages" %}</h2>
+                <h2>{% tr "Messages utilisateurs en direct" "Live user messages" %}</h2>
             </div>
         </div>
-        <div class="card-grid">
+        <div id="staff-support-feed" class="card-grid">
             {% for support_message in support_messages %}
             <article class="invite-card">
                 <span class="badge">{{ support_message.organizer.user.username }}</span>
@@ -122,11 +78,6 @@
                     </button>
                 </form>
             </article>
-            {% empty %}
-            <article class="empty-card">
-                <h3>{% tr "Aucun message pour le moment" "No messages yet" %}</h3>
-                <p>{% tr "Les nouveaux messages des utilisateurs apparaitront ici." "New user messages will appear here." %}</p>
-            </article>
             {% endfor %}
         </div>
     </section>
@@ -137,6 +88,10 @@
 {{ chart_data.usage|json_script:"usage-data" }}
 {{ chart_data.activity|json_script:"activity-data" }}
 {{ chart_data.revenue|json_script:"revenue-data" }}
+{{ chart_data.visits|json_script:"visits-data" }}
+{% endblock %}
+
+{% block extra_js %}
 <script>
 function renderBarChart(canvasId, dataId, labelKey, valueKey, color) {
     const canvas = document.getElementById(canvasId);
@@ -148,16 +103,11 @@ function renderBarChart(canvasId, dataId, labelKey, valueKey, color) {
     canvas.height = 220;
     ctx.clearRect(0, 0, width, 220);
 
-    if (!entries.length) {
-        ctx.fillStyle = "#6e6258";
-        ctx.font = "16px Arial";
-        ctx.fillText("{% tr 'Aucune donnee' 'No data' %}", 20, 40);
-        return;
-    }
+    if (!entries.length) return;
 
     const maxValue = Math.max(...entries.map(entry => entry[valueKey]), 1);
     const gap = 18;
-    const barWidth = Math.max(40, Math.floor((width - 40) / entries.length) - gap);
+    const barWidth = Math.max(38, Math.floor((width - 40) / entries.length) - gap);
 
     entries.forEach((entry, index) => {
         const barHeight = Math.round((entry[valueKey] / maxValue) * 130);
@@ -178,6 +128,56 @@ document.addEventListener("DOMContentLoaded", function () {
     renderBarChart("usage-chart", "usage-data", "label", "total", "#314d7d");
     renderBarChart("activity-chart", "activity-data", "label", "total", "#1f6f43");
     renderBarChart("revenue-chart", "revenue-data", "label", "total", "#9a6027");
+    renderBarChart("visits-chart", "visits-data", "label", "total", "#5b5bd6");
+
+    const supportFeed = document.getElementById("staff-support-feed");
+    if (!supportFeed) return;
+    const csrfTokenInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    const csrfToken = csrfTokenInput ? csrfTokenInput.value : "";
+
+    async function refreshSupportFeed() {
+        try {
+            const response = await fetch("{% url 'invitations:staff-support-feed' %}", {
+                headers: {"X-Requested-With": "XMLHttpRequest"}
+            });
+            if (!response.ok) return;
+            const data = await response.json();
+            if (!data.items) return;
+            supportFeed.innerHTML = "";
+            data.items.forEach(function (item) {
+                const card = document.createElement("article");
+                card.className = "invite-card";
+                const toggleLabel = item.can_send ? "{% tr 'Bloquer l envoi user' 'Block user sending' %}" : "{% tr 'Reautoriser l envoi user' 'Re-enable user sending' %}";
+                card.innerHTML = `
+                    <span class="badge">${item.username}</span>
+                    <h3>${item.subject}</h3>
+                    <p>${item.message}</p>
+                    <dl>
+                        <div><dt>{% tr "Expediteur" "Sender" %}</dt><dd>${item.sender_label}</dd></div>
+                        <div><dt>{% tr "Date" "Date" %}</dt><dd>${item.created_at}</dd></div>
+                    </dl>
+                    <form method="post" action="/staff/rapport/repondre/${item.organizer_id}/" class="invitation-form">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                        <div class="field-group">
+                            <input class="form-control" type="text" name="subject" value="Re: ${item.subject}" placeholder="{% tr 'Sujet de la reponse' 'Reply subject' %}">
+                        </div>
+                        <div class="field-group">
+                            <textarea class="form-control" name="message" rows="4" placeholder="{% tr 'Votre reponse a l utilisateur' 'Your reply to the user' %}"></textarea>
+                        </div>
+                        <button class="button button-secondary" type="submit">{% tr "Repondre" "Reply" %}</button>
+                    </form>
+                    <form method="post" action="/staff/rapport/toggle-support/${item.organizer_id}/">
+                        <input type="hidden" name="csrfmiddlewaretoken" value="${csrfToken}">
+                        <button class="button button-secondary" type="submit">${toggleLabel}</button>
+                    </form>
+                `;
+                supportFeed.appendChild(card);
+            });
+        } catch (error) {
+        }
+    }
+
+    setInterval(refreshSupportFeed, 5000);
 });
 </script>
 {% endblock %}

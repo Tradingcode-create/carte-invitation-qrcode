@@ -92,13 +92,20 @@ class SignUpForm(UserCreationForm):
 class InvitationForm(forms.ModelForm):
     class Meta:
         model = Invitation
-        fields = ["guest_name", "seat_location"]
+        fields = ["guest_name", "seat_location", "welcome_message"]
         widgets = {
             "guest_name": forms.TextInput(
                 attrs={"class": "form-control", "placeholder": "Ex. Couple Kasongo"}
             ),
             "seat_location": forms.TextInput(
                 attrs={"class": "form-control", "placeholder": "Table 8, rangee B"}
+            ),
+            "welcome_message": forms.Textarea(
+                attrs={
+                    "class": "form-control",
+                    "rows": 4,
+                    "placeholder": "Nous sommes heureux de vous accueillir a cette celebration.",
+                }
             ),
         }
 
@@ -111,6 +118,12 @@ class InvitationForm(forms.ModelForm):
         self.fields["seat_location"].label = tr_text("Place dans la salle", "Seat location")
         self.fields["seat_location"].widget.attrs["placeholder"] = tr_text(
             "Table 8, rangee B", "Table 8, row B"
+        )
+        self.fields["welcome_message"].label = tr_text("Message de bienvenue", "Welcome message")
+        self.fields["welcome_message"].required = False
+        self.fields["welcome_message"].widget.attrs["placeholder"] = tr_text(
+            "Nous sommes heureux de vous accueillir a cette celebration.",
+            "We are delighted to welcome you to this celebration.",
         )
 
 

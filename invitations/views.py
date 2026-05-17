@@ -4,6 +4,7 @@ import secrets
 import tempfile
 from io import BytesIO
 from urllib.parse import quote
+from datetime import timedelta
 
 from django.conf import settings
 from django.contrib import messages
@@ -17,6 +18,7 @@ from django.db import transaction
 from django.db.models import Count
 from django.http import FileResponse, Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
+from django.template.loader import render_to_string
 from django.urls import reverse, reverse_lazy
 from django.utils import translation
 from django.utils import timezone
@@ -30,7 +32,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 from .forms import AdminSupportReplyForm, ContactAdminForm, ContactAdminReplyForm, ExcelUploadForm, InvitationForm, PaymentInitiationForm, SignUpForm
 from .localization import tr_text
-from .models import Invitation, OrganizerProfile, PaymentTransaction, Subscription, SupportMessage
+from .models import Invitation, OrganizerProfile, PaymentTransaction, SiteVisit, Subscription, SupportMessage
 
 LANGUAGE_SESSION_KEY = "django_language"
 
@@ -107,22 +109,54 @@ def _load_font(size, bold=False):
     return ImageFont.load_default()
 
 
+def _default_welcome_message(invitation):
+    return invitation.welcome_message.strip() or tr_text(
+        "Nous sommes honorés de vous accueillir parmi nos invites.",
+        "We are honored to welcome you among our guests.",
+    )
+
+
+def _ensure_invitation_qr(invitation):
+    invitation.ensure_qr_code()
+    return invitation
+
+
+def _build_default_invitation_message(profile, guest_name):
+    event_label = profile.get_event_label()
+    return tr_text(
+        f"{guest_name}, bienvenue a notre {event_label.lower()}. Nous serons heureux de partager ce moment avec vous.",
+        f"{guest_name}, welcome to our {event_label.lower()}. We will be delighted to share this moment with you.",
+    )
+
+
 def build_invitation_jpeg(invitation):
-    canvas = Image.new("RGB", (1400, 900), "#f6ecdf")
+    invitation = _ensure_invitation_qr(invitation)
+    canvas = Image.new("RGB", (1600, 920), "#efe6d7")
     draw = ImageDraw.Draw(canvas)
-    draw.rounded_rectangle((40, 40, 1360, 860), radius=34, fill="#fffaf4", outline="#d8c8b0", width=3)
-    draw.rectangle((40, 40, 1360, 95), fill="#0f5d5e")
+    draw.rounded_rectangle((40, 40, 1560, 880), radius=34, fill="#fffaf4", outline="#d8c8b0", width=3)
+    draw.rounded_rectangle((60, 60, 1210, 860), radius=28, fill="#fffdf9", outline="#d6c4a8", width=2)
+    draw.rounded_rectangle((1225, 60, 1540, 860), radius=28, fill="#f6efe2", outline="#d6c4a8", width=2)
+    draw.rectangle((80, 88, 1190, 150), fill="#143d64")
+    draw.rectangle((1248, 88, 1518, 150), fill="#c67d2d")
 
-    title_font = _load_font(56, bold=True)
-    subtitle_font = _load_font(32, bold=True)
-    body_font = _load_font(30)
-    small_font = _load_font(24)
+    title_font = _load_font(70, bold=True)
+    subtitle_font = _load_font(30, bold=True)
+    body_font = _load_font(28)
+    small_font = _load_font(22)
+    code_font = _load_font(26, bold=True)
 
-    draw.text((90, 140), tr_text(f"Invitation {invitation.event_label}", f"{invitation.event_label} Invitation"), fill="#0f5d5e", font=subtitle_font)
-    draw.text((90, 240), invitation.guest_name, fill="#1f1a17", font=title_font)
-    draw.text((90, 360), tr_text(f"Place reservee: {invitation.seat_location}", f"Reserved seat: {invitation.seat_location}"), fill="#6e6258", font=body_font)
+    draw.text((108, 98), tr_text("CARTE D'EMBARQUEMENT INVITATION", "INVITATION BOARDING PASS"), fill="#ffffff", font=subtitle_font)
+    draw.text((132, 205), invitation.guest_name, fill="#1f1a17", font=title_font)
+    draw.text((132, 300), invitation.event_label.upper(), fill="#143d64", font=subtitle_font)
+    draw.text((132, 372), tr_text("Bienvenue a bord de cette celebration", "Welcome aboard this celebration"), fill="#6e6258", font=body_font)
     draw.text(
-        (90, 430),
+        (132, 438),
+        _default_welcome_message(invitation),
+        fill="#6e6258",
+        font=body_font,
+    )
+    draw.text(
+        (132, 572),
         tr_text(
             f"Organisateur: {invitation.organizer.user.get_full_name() or invitation.organizer.user.username}",
             f"Organizer: {invitation.organizer.user.get_full_name() or invitation.organizer.user.username}",
@@ -130,13 +164,21 @@ def build_invitation_jpeg(invitation):
         fill="#6e6258",
         font=small_font,
     )
-    draw.text((90, 500), tr_text("QR code integre pour controle et placement", "QR code embedded for access and seating"), fill="#0f5d5e", font=small_font)
+    draw.text((132, 628), tr_text(f"Porte / Zone: {invitation.seat_location}", f"Gate / Zone: {invitation.seat_location}"), fill="#143d64", font=code_font)
+    draw.text((132, 678), tr_text(f"Code billet: {invitation.slug.upper()}", f"Ticket code: {invitation.slug.upper()}"), fill="#1f1a17", font=small_font)
+    draw.text((132, 728), tr_text("QR code integre pour acces, controle et placement", "QR code embedded for access, control, and seating"), fill="#0f5d5e", font=small_font)
+    draw.text((1270, 205), tr_text("ACCES", "ACCESS"), fill="#c67d2d", font=subtitle_font)
+    draw.text((1270, 270), invitation.event_label.upper(), fill="#1f1a17", font=subtitle_font)
+    draw.text((1270, 360), tr_text("Invité", "Guest"), fill="#6e6258", font=small_font)
+    draw.text((1270, 395), invitation.guest_name[:18], fill="#1f1a17", font=body_font)
+    draw.text((1270, 470), tr_text("Place", "Seat"), fill="#6e6258", font=small_font)
+    draw.text((1270, 505), invitation.seat_location[:18], fill="#1f1a17", font=body_font)
 
     if invitation.qr_code:
         with invitation.qr_code.open("rb") as qr_file:
             qr_image = Image.open(qr_file).convert("RGB")
-            qr_image = qr_image.resize((280, 280))
-            canvas.paste(qr_image, (980, 220))
+            qr_image = qr_image.resize((210, 210))
+            canvas.paste(qr_image, (1280, 585))
 
     output = BytesIO()
     canvas.save(output, format="JPEG", quality=92)
@@ -175,6 +217,18 @@ def build_staff_report_workbook():
                 subscription.paid_at.strftime("%Y-%m-%d %H:%M") if subscription.paid_at else "",
             ]
         )
+    visits_sheet = workbook.create_sheet("Visites")
+    visits_sheet.append(["Page", "Session", "Utilisateur", "Hits", "Derniere visite"])
+    for visit in SiteVisit.objects.select_related("user").all()[:500]:
+        visits_sheet.append(
+            [
+                visit.path,
+                visit.session_key,
+                visit.user.username if visit.user else "",
+                visit.hits,
+                visit.last_seen_at.strftime("%Y-%m-%d %H:%M"),
+            ]
+        )
     return workbook
 
 
@@ -182,15 +236,23 @@ def build_staff_stats():
     now = timezone.now()
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     active_cutoff = now - timezone.timedelta(days=30)
+    week_cutoff = now - timedelta(days=6)
 
     invitations_ordered = OrganizerProfile.objects.aggregate(total=Sum("planned_invitations"))["total"] or 0
     invitations_used = Invitation.objects.count()
     active_users = OrganizerProfile.objects.filter(last_seen_at__gte=active_cutoff).count()
     inactive_users = OrganizerProfile.objects.count() - active_users
+    total_visits = SiteVisit.objects.aggregate(total=Sum("hits"))["total"] or 0
+    unique_visitors = SiteVisit.objects.values("session_key").distinct().count()
     monthly_revenue = (
         Subscription.objects.filter(is_paid=True, paid_at__gte=month_start).aggregate(total=Sum("price_usd"))["total"]
         or 0
     )
+    daily_visits = []
+    for offset in range(7):
+        target_day = (week_cutoff + timedelta(days=offset)).date()
+        hits = SiteVisit.objects.filter(last_seen_at__date=target_day).aggregate(total=Sum("hits"))["total"] or 0
+        daily_visits.append({"label": target_day.strftime("%d/%m"), "total": hits})
 
     return {
         "ceremonies": list(
@@ -210,6 +272,11 @@ def build_staff_stats():
         "revenue": [
             {"label": month_start.strftime("%b %Y"), "total": float(monthly_revenue)},
         ],
+        "visits": daily_visits,
+        "visit_totals": {
+            "total_hits": total_visits,
+            "unique_visitors": unique_visitors,
+        },
     }
 
 
@@ -247,6 +314,7 @@ def create_invitations_from_workbook(profile, excel_file):
                 subscription=subscription,
                 guest_name=name,
                 seat_location=seat,
+                welcome_message=_build_default_invitation_message(profile, name),
             )
             created += 1
         return created, skipped, ""
@@ -283,6 +351,16 @@ class HomeView(TemplateView):
                 {"name": "Pro", "range": tr_text("200 a 599 invitations", "200 to 599 invitations"), "price": "239,9 $"},
                 {"name": tr_text("Illimite", "Unlimited"), "range": tr_text("Illimite", "Unlimited"), "price": "999,9 $"},
             ]
+        return context
+
+
+class AboutView(TemplateView):
+    template_name = "invitations/about.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["ceo_name"] = "Tresor"
+        context["ceo_phone"] = "+243974073701"
         return context
 
 
@@ -448,6 +526,8 @@ class InvitationCreateView(InvitationPermissionMixin, CreateView):
 
         form.instance.organizer = profile
         form.instance.subscription = subscription
+        if not form.instance.welcome_message.strip():
+            form.instance.welcome_message = _build_default_invitation_message(profile, form.instance.guest_name)
         messages.success(self.request, "Invitation creee avec succes.")
         return super().form_valid(form)
 
@@ -460,6 +540,7 @@ class InvitationDetailView(InvitationPermissionMixin, DetailView):
     context_object_name = "invitation"
 
     def get_context_data(self, **kwargs):
+        _ensure_invitation_qr(self.object)
         context = super().get_context_data(**kwargs)
         context["can_edit"] = not self.object.is_locked
         context["download_enabled"] = self.object.subscription.is_paid
@@ -489,6 +570,9 @@ class InvitationUpdateView(InvitationPermissionMixin, UpdateView):
         return super().dispatch(request, *args, **kwargs)
 
     def get_success_url(self):
+        if not self.object.welcome_message.strip():
+            self.object.welcome_message = _build_default_invitation_message(self.object.organizer, self.object.guest_name)
+            self.object.save(update_fields=["welcome_message", "updated_at"])
         messages.success(self.request, "Invitation mise a jour.")
         return reverse("invitations:detail", kwargs={"slug": self.object.slug})
 
@@ -513,6 +597,10 @@ class SharedInvitationDetailView(DetailView):
     context_object_name = "invitation"
     slug_field = "share_token"
     slug_url_kwarg = "token"
+
+    def get_context_data(self, **kwargs):
+        _ensure_invitation_qr(self.object)
+        return super().get_context_data(**kwargs)
 
 
 class StaffReportView(StaffRequiredMixin, TemplateView):
@@ -542,6 +630,8 @@ class StaffReportView(StaffRequiredMixin, TemplateView):
                     "active_users": chart_data["activity"][0]["total"] if chart_data["activity"] else 0,
                     "inactive_users": chart_data["activity"][1]["total"] if len(chart_data["activity"]) > 1 else 0,
                     "revenue_month": chart_data["revenue"][0]["total"] if chart_data["revenue"] else 0,
+                    "site_hits": chart_data["visit_totals"]["total_hits"],
+                    "unique_visitors": chart_data["visit_totals"]["unique_visitors"],
                 },
             }
         )
@@ -573,7 +663,7 @@ class ContactAdminView(LoginRequiredMixin, TemplateView):
         if profile:
             unread_messages = profile.support_messages.filter(sender_type=SupportMessage.SENDER_ADMIN, is_read_by_user=False)
             unread_messages.update(is_read_by_user=True)
-            context["messages_thread"] = profile.support_messages.select_related("sender_user")[:30]
+            context["messages_thread"] = profile.support_messages.select_related("sender_user").order_by("created_at")[:50]
             context["thread_started"] = profile.support_messages.exists()
             context["can_send_message"] = profile.support_user_can_send
         return context
@@ -700,6 +790,60 @@ class StaffToggleSupportView(StaffRequiredMixin, View):
             else "L'envoi de messages utilisateur a ete desactive.",
         )
         return redirect("invitations:staff-report")
+
+
+@login_required
+def contact_admin_thread_data(request):
+    profile = getattr(request.user, "organizer_profile", None)
+    if not profile:
+        return JsonResponse({"messages": [], "latest_timestamp": ""})
+
+    profile.support_messages.filter(sender_type=SupportMessage.SENDER_ADMIN, is_read_by_user=False).update(is_read_by_user=True)
+    thread_messages = list(
+        profile.support_messages.select_related("sender_user").order_by("created_at")[:50]
+    )
+    latest = thread_messages[-1].created_at.isoformat() if thread_messages else ""
+    return JsonResponse(
+        {
+            "messages": [
+                {
+                    "sender_type": item.sender_type,
+                    "sender_label": item.sender_label,
+                    "subject": item.subject,
+                    "message": item.message,
+                    "created_at": timezone.localtime(item.created_at).strftime("%d/%m/%Y %H:%M"),
+                }
+                for item in thread_messages
+            ],
+            "latest_timestamp": latest,
+        }
+    )
+
+
+@login_required
+def staff_support_feed(request):
+    if not request.user.is_staff:
+        return JsonResponse({"items": []}, status=403)
+
+    support_messages = SupportMessage.objects.select_related("organizer", "organizer__user").order_by("-created_at")[:12]
+    latest = support_messages[0].created_at.isoformat() if support_messages else ""
+    return JsonResponse(
+        {
+            "items": [
+                {
+                    "organizer_id": item.organizer_id,
+                    "username": item.organizer.user.username,
+                    "subject": item.subject,
+                    "message": item.message,
+                    "sender_label": item.sender_label,
+                    "created_at": timezone.localtime(item.created_at).strftime("%d/%m/%Y %H:%M"),
+                    "can_send": item.organizer.support_user_can_send,
+                }
+                for item in support_messages
+            ],
+            "latest_timestamp": latest,
+        }
+    )
 
 
 @login_required
@@ -910,6 +1054,7 @@ def download_qrcode(request, slug):
     invitation = get_object_or_404(
         Invitation.objects.select_related("subscription"), slug=slug, organizer=request.user.organizer_profile
     )
+    _ensure_invitation_qr(invitation)
     if not invitation.subscription.is_paid or not invitation.qr_code:
         raise Http404("QR code indisponible")
     return FileResponse(
@@ -926,6 +1071,7 @@ def download_invitation_image(request, slug):
         slug=slug,
         organizer=request.user.organizer_profile,
     )
+    _ensure_invitation_qr(invitation)
     if not invitation.subscription.is_paid:
         raise Http404("Image indisponible")
     jpeg = build_invitation_jpeg(invitation)
