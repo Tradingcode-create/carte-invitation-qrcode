@@ -4,6 +4,8 @@ from django.conf import settings
 from django.utils import translation
 from django.utils import timezone
 
+LANGUAGE_SESSION_KEY = "django_language"
+
 
 class SessionActivityMiddleware:
     def __init__(self, get_response):
@@ -16,8 +18,8 @@ class SessionActivityMiddleware:
             if profile and profile.preferred_language:
                 preferred_language = profile.preferred_language[:2]
 
-                if request.session.get(settings.LANGUAGE_COOKIE_NAME) != preferred_language:
-                    request.session[settings.LANGUAGE_COOKIE_NAME] = preferred_language
+                if request.session.get(LANGUAGE_SESSION_KEY) != preferred_language:
+                    request.session[LANGUAGE_SESSION_KEY] = preferred_language
 
                 translation.activate(preferred_language)
                 request.LANGUAGE_CODE = preferred_language

@@ -8,13 +8,28 @@ except ImportError:  # pragma: no cover - fallback local
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+
+def env_bool(name, default=False):
+    return os.environ.get(name, str(default)).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def env_list(name, default=""):
+    raw_value = os.environ.get(name, default)
+    return [item.strip() for item in raw_value.split(",") if item.strip()]
+
 SECRET_KEY = "django-insecure-change-me-before-production"
-DEBUG = True
+DEBUG = env_bool("DEBUG", default=True)
 ALLOWED_HOSTS = [
     ".onrender.com",
     "localhost",
     "127.0.0.1",
 ]
+ALLOWED_HOSTS += env_list("ALLOWED_HOSTS")
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://carte-invitation-qrcode.onrender.com",
+]
+CSRF_TRUSTED_ORIGINS += env_list("CSRF_TRUSTED_ORIGINS")
 
 
 INSTALLED_APPS = [
@@ -84,6 +99,10 @@ SESSION_ENGINE = "django.contrib.sessions.backends.db"
 SESSION_COOKIE_AGE = 60 * 30
 SESSION_IDLE_TIMEOUT = 60 * 30
 SESSION_SAVE_EVERY_REQUEST = False
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_SSL_REDIRECT = env_bool("SECURE_SSL_REDIRECT", default=not DEBUG)
 
 
 AUTH_PASSWORD_VALIDATORS = []
