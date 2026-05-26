@@ -1,5 +1,7 @@
 from datetime import timedelta
 
+from django.core.cache import cache
+from django.http import JsonResponse, HttpResponse
 from django.conf import settings
 from django.utils import timezone
 from django.utils import translation
@@ -7,6 +9,77 @@ from django.utils import translation
 from .models import SiteVisit
 
 LANGUAGE_SESSION_KEY = "django_language"
+
+
+class RequestHardeningMiddleware:
+    SENSITIVE_PATHS = (
+        "/accounts/login/",
+        "/inscription/",
+        "/accounts/password_reset/",
+        "/contact-admin/",
+        "/contact-admin/repondre/",
+        "/staff/rapport/repondre/",
+        "/paiement/demarrer/",
+    )
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.method == "POST" and self._is_sensitive_path(request.path):
+            blocked = self._check_rate_limit(request)
+            if blocked:
+                if request.headers.get("X-Requested-With") == "XMLHttpRequest":
+                    return JsonResponse(
+                        {"ok": False, "error": "Trop de tentatives. Merci de patienter avant de recommencer."},
+                        status=429,
+                    )
+                return HttpResponse("Trop de tentatives. Merci de patienter avant de recommencer.", status=429)
+
+        response = self.get_response(request)
+        self._apply_security_headers(response)
+        return response
+
+    def _is_sensitive_path(self, path):
+        return any(path.startswith(prefix) for prefix in self.SENSITIVE_PATHS)
+
+    def _check_rate_limit(self, request):
+        client_ip = (
+            request.META.get("HTTP_X_FORWARDED_FOR", "").split(",")[0].strip()
+            or request.META.get("REMOTE_ADDR", "")
+            or "anonymous"
+        )
+        key = f"ratelimit:{request.path}:{client_ip}"
+        attempts = cache.get(key, 0)
+        if attempts >= getattr(settings, "SECURITY_RATE_LIMIT_ATTEMPTS", 12):
+            return True
+        cache.set(
+            key,
+            attempts + 1,
+            timeout=getattr(settings, "SECURITY_RATE_LIMIT_WINDOW", 300),
+        )
+        return False
+
+    def _apply_security_headers(self, response):
+        response.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com data:; "
+            "img-src 'self' data: blob: https:; "
+            "connect-src 'self' https: ws: wss:; "
+            "object-src 'none'; "
+            "base-uri 'self'; "
+            "form-action 'self'; "
+            "frame-ancestors 'none'",
+        )
+        response.setdefault(
+            "Permissions-Policy",
+            "camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=()",
+        )
+        response.setdefault("Cross-Origin-Resource-Policy", "same-origin")
+        return response
 
 
 class SessionActivityMiddleware:

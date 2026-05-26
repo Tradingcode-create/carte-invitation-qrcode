@@ -4,75 +4,138 @@
 {% block title %}{% tr "Contacter l admin" "Contact admin" %}{% endblock %}
 
 {% block content %}
-<main class="form-layout">
-    <section class="form-panel">
+{% with latest_message=latest_thread_message %}
+<main class="chat-layout">
+    <aside class="conversation-sidebar">
         <div class="section-head">
             <div>
                 <p class="eyebrow">{% tr "Support" "Support" %}</p>
-                <h1>{% tr "Contacter l administration" "Contact the administration" %}</h1>
+                <h1>{% tr "Messagerie assistance" "Support messaging" %}</h1>
             </div>
         </div>
-        <p class="hero-text">
-            {% tr "Utilisez ce formulaire si vous avez besoin d aide pour votre abonnement, vos invitations ou vos paiements." "Use this form if you need help with your subscription, invitations, or payments." %}
-        </p>
 
-        {% if not thread_started %}
-        <form method="post" class="invitation-form">
-            {% csrf_token %}
-            {% for field in form %}
-            <div class="field-group">
-                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
-                {{ field }}
-                {% if field.errors %}
-                <div class="error-list">{{ field.errors }}</div>
+        <div class="conversation-list">
+            <button type="button" class="conversation-item is-active">
+                <div class="conversation-topline">
+                    <strong>{% tr "Administration EventQr" "EventQr administration" %}</strong>
+                    <small class="field-help">
+                        {% if latest_message %}
+                            {{ latest_message.created_at|date:"d/m/Y H:i" }}
+                        {% else %}
+                            {% tr "Nouvelle discussion" "New thread" %}
+                        {% endif %}
+                    </small>
+                </div>
+                <p>
+                    {% if request.user.organizer_profile.support_thread_subject %}
+                        {{ request.user.organizer_profile.support_thread_subject }}
+                    {% else %}
+                        {% tr "Discussion support" "Support conversation" %}
+                    {% endif %}
+                </p>
+                <span class="field-help conversation-summary">
+                    {% if latest_message %}
+                        {{ latest_message.message|truncatechars:90 }}
+                    {% else %}
+                        {% tr "Ouvrez votre premiere discussion avec l administration." "Start your first discussion with the administration." %}
+                    {% endif %}
+                </span>
+            </button>
+        </div>
+
+        <div class="preview-card conversation-sidebar-card">
+            <span class="badge">{% tr "Direct" "Live" %}</span>
+            <h2>{% tr "Chat instantane" "Instant chat" %}</h2>
+            <p class="preview-copy">
+                {% tr "Les messages arrivent en temps reel, avec son de notification et compteur de non lus." "Messages arrive in real time, with a notification sound and unread counter." %}
+            </p>
+            <div class="preview-seat">
+                {% if can_send_message %}
+                    {% tr "Vous pouvez repondre librement dans ce fil." "You can freely reply in this thread." %}
+                {% else %}
+                    {% tr "Les reponses sont temporairement suspendues par l administration." "Replies are temporarily suspended by administration." %}
                 {% endif %}
             </div>
-            {% endfor %}
-            <button class="button button-primary" type="submit">{% tr "Envoyer le message" "Send message" %}</button>
-        </form>
-        {% else %}
-        <div class="import-panel">
-            <div>
-                <p class="eyebrow">{% tr "Discussion deja ouverte" "Conversation already open" %}</p>
-                <h2>{{ request.user.organizer_profile.support_thread_subject|default:"" }}{% if not request.user.organizer_profile.support_thread_subject %}{% tr "Fil de discussion en cours" "Current discussion thread" %}{% endif %}</h2>
-                <p class="hero-text">
-                    {% tr "Une fois une discussion entamee, toutes les nouvelles demandes passent par le fil existant." "Once a conversation starts, all new requests continue through the same thread." %}
-                    {% if not can_send_message %}{% tr "L administration a momentanement desactive vos reponses." "Administration has temporarily disabled your replies." %}{% endif %}
-                </p>
-            </div>
         </div>
-        {% endif %}
+    </aside>
 
-        <section class="thread-panel">
+    <section class="chat-stage">
+        {% if not thread_started %}
+        <section class="form-panel">
             <div class="section-head">
                 <div>
-                    <p class="eyebrow">{% tr "Messages" "Messages" %}</p>
-                    <h2>{% tr "Historique des echanges" "Conversation history" %}</h2>
+                    <p class="eyebrow">{% tr "Nouvelle demande" "New request" %}</p>
+                    <h2>{% tr "Contacter l administration" "Contact the administration" %}</h2>
                 </div>
             </div>
-            <div id="message-thread" class="message-thread">
-                {% for item in messages_thread %}
-                <article class="thread-bubble {% if item.sender_type == 'admin' %}thread-bubble-admin{% else %}thread-bubble-user{% endif %}">
-                    <span class="badge">{{ item.sender_label }}</span>
-                    <h3>{{ item.subject }}</h3>
-                    <p>{{ item.message }}</p>
-                    <small class="field-help">{{ item.created_at|date:"d/m/Y H:i" }}</small>
-                </article>
-                {% empty %}
-                <article class="empty-card">
-                    <h3>{% tr "Aucun message pour le moment" "No messages yet" %}</h3>
-                    <p>{% tr "Votre premiere demande apparaitra ici." "Your first request will appear here." %}</p>
-                </article>
+            <p class="hero-text">
+                {% tr "Utilisez ce formulaire si vous avez besoin d aide pour votre abonnement, vos invitations ou vos paiements." "Use this form if you need help with your subscription, invitations, or payments." %}
+            </p>
+            <form method="post" class="invitation-form">
+                {% csrf_token %}
+                {% for field in form %}
+                <div class="field-group">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                    <div class="error-list">{{ field.errors }}</div>
+                    {% endif %}
+                </div>
                 {% endfor %}
+                <button class="button button-primary" type="submit">{% tr "Envoyer le message" "Send message" %}</button>
+            </form>
+        </section>
+        {% else %}
+        <section class="conversation-panel is-active">
+            <div class="chat-shell chat-shell-expanded">
+                <div class="chat-header">
+                    <div>
+                        <strong>{% tr "Administration EventQr" "EventQr administration" %}</strong>
+                        <p class="field-help">
+                            {% if request.user.organizer_profile.support_thread_subject %}
+                                {{ request.user.organizer_profile.support_thread_subject }}
+                            {% else %}
+                                {% tr "Fil de discussion en cours" "Current discussion thread" %}
+                            {% endif %}
+                        </p>
+                    </div>
+                    <span class="badge">{% tr "En ligne" "Online" %}</span>
+                </div>
+
+                <div id="message-thread" class="message-thread message-thread-whatsapp">
+                    {% for item in messages_thread %}
+                    <article data-message-id="{{ item.id }}" class="thread-bubble {% if item.sender_type == 'admin' %}thread-bubble-admin{% else %}thread-bubble-user{% endif %}">
+                        <div class="thread-meta">
+                            <span class="badge">{{ item.sender_label }}</span>
+                            <small class="field-help">{{ item.created_at|date:"d/m/Y H:i" }}</small>
+                        </div>
+                        <h3>{{ item.subject }}</h3>
+                        <p>{{ item.message }}</p>
+                        {% if item.sender_type == 'user' %}
+                        <div class="bubble-status-row">
+                            <span
+                                class="message-status message-status-{{ item.delivery_state }}"
+                                data-message-status-id="{{ item.id }}"
+                            >&#10003;&#10003; {{ item.delivery_label }}</span>
+                        </div>
+                        {% endif %}
+                    </article>
+                    {% empty %}
+                    <article class="empty-card">
+                        <h3>{% tr "Aucun message pour le moment" "No messages yet" %}</h3>
+                        <p>{% tr "Votre premiere demande apparaitra ici." "Your first request will appear here." %}</p>
+                    </article>
+                    {% endfor %}
+                </div>
             </div>
 
-            {% if thread_started and can_send_message %}
-            <form method="post" action="{% url 'invitations:contact-admin-reply' %}" class="invitation-form">
+            {% if can_send_message %}
+            <form method="post" action="{% url 'invitations:contact-admin-reply' %}" class="chat-composer">
                 {% csrf_token %}
                 <div class="section-head">
                     <div>
                         <p class="eyebrow">{% tr "Repondre" "Reply" %}</p>
-                        <h2>{% tr "Continuer cette discussion" "Continue this conversation" %}</h2>
+                        <h2>{% tr "Envoyer une reponse" "Send a reply" %}</h2>
                     </div>
                 </div>
                 {% for field in reply_form %}
@@ -86,77 +149,148 @@
                 {% endfor %}
                 <button class="button button-primary" type="submit">{% tr "Repondre" "Reply" %}</button>
             </form>
+            {% else %}
+            <div class="import-panel">
+                <p class="hero-text">{% tr "L administration a momentanement desactive vos reponses dans cette discussion." "Administration has temporarily disabled your replies in this conversation." %}</p>
+            </div>
             {% endif %}
         </section>
+        {% endif %}
     </section>
-
-    <aside class="preview-panel">
-        <p class="eyebrow">{% tr "Assistance" "Assistance" %}</p>
-        <div class="preview-card">
-            <span class="badge">{% tr "Direct" "Direct" %}</span>
-            <h2>{% tr "Fil instantane" "Instant thread" %}</h2>
-            <p class="preview-copy">
-                {% tr "Les nouveaux messages arrivent automatiquement dans cette page sans rechargement manuel." "New messages arrive automatically on this page without manual refresh." %}
-            </p>
-            <div class="preview-seat">{% tr "Pratique pour echanger rapidement avec l administration." "Convenient for fast exchanges with the administration." %}</div>
-        </div>
-    </aside>
 </main>
+{% endwith %}
 {% endblock %}
 
 {% block extra_js %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const thread = document.getElementById("message-thread");
-    if (!thread) return;
-    let latestTimestamp = "";
+    const replyForm = document.querySelector("form.chat-composer");
+    const organizerId = "{{ request.user.organizer_profile.id|default:'' }}";
 
-    function renderMessages(items) {
-        if (!items.length) return;
-        thread.innerHTML = "";
-        items.forEach(function (item) {
-            const article = document.createElement("article");
-            article.className = "thread-bubble " + (item.sender_type === "admin" ? "thread-bubble-admin" : "thread-bubble-user");
+    if (!thread) {
+        return;
+    }
 
-            const badge = document.createElement("span");
-            badge.className = "badge";
-            badge.textContent = item.sender_label;
+    function scrollThreadToBottom() {
+        thread.scrollTop = thread.scrollHeight;
+    }
 
-            const title = document.createElement("h3");
-            title.textContent = item.subject;
+    function buildBubble(item) {
+        const article = document.createElement("article");
+        article.dataset.messageId = item.id;
+        article.className = "thread-bubble " + (item.sender_type === "admin" ? "thread-bubble-admin" : "thread-bubble-user");
 
-            const body = document.createElement("p");
-            body.textContent = item.message;
+        const meta = document.createElement("div");
+        meta.className = "thread-meta";
 
-            const time = document.createElement("small");
-            time.className = "field-help";
-            time.textContent = item.created_at;
+        const badge = document.createElement("span");
+        badge.className = "badge";
+        badge.textContent = item.sender_type === "admin" ? "Administration" : "Vous";
 
-            article.appendChild(badge);
-            article.appendChild(title);
-            article.appendChild(body);
-            article.appendChild(time);
-            thread.appendChild(article);
+        const time = document.createElement("small");
+        time.className = "field-help";
+        time.textContent = item.created_at;
+
+        const title = document.createElement("h3");
+        title.textContent = item.subject;
+
+        const body = document.createElement("p");
+        body.textContent = item.message;
+
+        meta.appendChild(badge);
+        meta.appendChild(time);
+        article.appendChild(meta);
+        article.appendChild(title);
+        article.appendChild(body);
+        if (item.sender_type === "user") {
+            const footer = document.createElement("div");
+            footer.className = "bubble-status-row";
+
+            const status = document.createElement("span");
+            status.className = "message-status message-status-" + (item.delivery_state || "delivered");
+            status.dataset.messageStatusId = item.id;
+            status.innerHTML = "&#10003;&#10003; " + (item.delivery_label || "Distribue");
+
+            footer.appendChild(status);
+            article.appendChild(footer);
+        }
+        return article;
+    }
+
+    function updateMessageStatus(messageIds, state, label) {
+        (messageIds || []).forEach(function (messageId) {
+            const node = thread.querySelector('[data-message-status-id="' + messageId + '"]');
+            if (!node) return;
+            node.className = "message-status message-status-" + state;
+            node.innerHTML = "&#10003;&#10003; " + label;
         });
     }
 
-    async function refreshThread() {
+    function appendMessage(item) {
+        if (!item || String(item.organizer_id) !== String(organizerId)) return;
+        if (thread.querySelector('[data-message-id="' + item.id + '"]')) return;
+        const emptyCard = thread.querySelector(".empty-card");
+        if (emptyCard) {
+            emptyCard.remove();
+        }
+        thread.appendChild(buildBubble(item));
+        scrollThreadToBottom();
+    }
+
+    async function markVisibleMessagesAsRead() {
         try {
-            const response = await fetch("{% url 'invitations:contact-admin-thread' %}", {
+            await fetch("{% url 'invitations:contact-admin-thread' %}", {
                 headers: {"X-Requested-With": "XMLHttpRequest"}
             });
-            if (!response.ok) return;
-            const data = await response.json();
-            if (data.latest_timestamp && data.latest_timestamp !== latestTimestamp) {
-                latestTimestamp = data.latest_timestamp;
-                renderMessages(data.messages || []);
+            if (window.eventQrSetUnreadBadge) {
+                window.eventQrSetUnreadBadge(0);
             }
         } catch (error) {
         }
     }
 
-    refreshThread();
-    setInterval(refreshThread, 3000);
+    window.addEventListener("eventqr:support", function (event) {
+        const data = event.detail || {};
+        if (data.kind === "support.message" && data.message_item && String(data.message_item.organizer_id) === String(organizerId)) {
+            appendMessage(data.message_item);
+            if (data.message_item.sender_type === "admin") {
+                markVisibleMessagesAsRead();
+            }
+        }
+        if (data.kind === "support.read") {
+            updateMessageStatus(data.read_by_admin_ids, "read", "Lu");
+        }
+        if (data.kind === "support.permissions") {
+            window.location.reload();
+        }
+    });
+
+    if (replyForm) {
+        replyForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            const submitButton = replyForm.querySelector('button[type="submit"]');
+            const formData = new FormData(replyForm);
+            if (submitButton) submitButton.disabled = true;
+            try {
+                const response = await fetch(replyForm.action, {
+                    method: "POST",
+                    body: formData,
+                    headers: {"X-Requested-With": "XMLHttpRequest"}
+                });
+                if (!response.ok) {
+                    return;
+                }
+                replyForm.reset();
+            } catch (error) {
+            } finally {
+                if (submitButton) submitButton.disabled = false;
+            }
+        });
+    }
+
+    markVisibleMessagesAsRead();
+    scrollThreadToBottom();
 });
 </script>
 {% endblock %}

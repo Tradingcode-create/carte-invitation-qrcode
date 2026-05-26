@@ -25,21 +25,28 @@
                 <span class="session-dot"></span>
                 <strong>{{ user.get_full_name|default:user.username }}</strong>
                 <span>{% tr "Connecte" "Online" %}</span>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button class="button button-secondary button-small session-logout" type="submit">{% tr "Deconnexion" "Log out" %}</button>
+                </form>
             </span>
-            <a href="{% url 'invitations:subscription' %}">{% tr "Abonnement" "Subscription" %}</a>
-            <a href="{% url 'invitations:list' %}">{% tr "Invites" "Guests" %}</a>
-            <a href="{% url 'invitations:create' %}">{% tr "Nouvelle invitation" "New invitation" %}</a>
-            <a href="{% url 'invitations:contact-admin' %}">{% tr "Contacter l'admin" "Contact admin" %}</a>
             {% if user.is_staff %}
+            <a id="nav-message-link" href="{% url 'invitations:staff-report' %}#messages">
+                {% tr "Message" "Messages" %}
+                <span id="nav-unread-badge" class="nav-badge is-hidden">0</span>
+            </a>
             <a href="{% url 'invitations:staff-report' %}">{% tr "Rapport" "Report" %}</a>
             <a href="/admin/">{% tr "Admin" "Admin" %}</a>
             {% else %}
+            <a href="{% url 'invitations:subscription' %}">{% tr "Abonnement" "Subscription" %}</a>
+            <a href="{% url 'invitations:list' %}">{% tr "Invites" "Guests" %}</a>
+            <a href="{% url 'invitations:create' %}">{% tr "Nouvelle invitation" "New invitation" %}</a>
+            <a id="nav-message-link" href="{% url 'invitations:contact-admin' %}">
+                {% tr "Contacter l'admin" "Contact admin" %}
+                <span id="nav-unread-badge" class="nav-badge is-hidden">0</span>
+            </a>
             <a href="{% url 'invitations:about' %}">{% tr "A propos" "About" %}</a>
             {% endif %}
-            <form method="post" action="{% url 'logout' %}">
-                {% csrf_token %}
-                <button class="button button-secondary button-small" type="submit">{% tr "Deconnexion" "Log out" %}</button>
-            </form>
             {% else %}
             <a href="{% url 'invitations:signup' %}">{% tr "Inscription" "Sign up" %}</a>
             <a href="{% url 'login' %}">{% tr "Connexion" "Log in" %}</a>
@@ -74,6 +81,10 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     let previousUnread = null;
+    const unreadBadge = document.getElementById("nav-unread-badge");
+    const messageLink = document.getElementById("nav-message-link");
+    const baseTitle = document.title;
+    let fallbackInterval = null;
 
     function playIncomingTone() {
         const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -93,6 +104,22 @@ document.addEventListener("DOMContentLoaded", function () {
         oscillator.stop(ctx.currentTime + 0.36);
     }
 
+    window.eventQrPlayIncomingTone = playIncomingTone;
+    window.eventQrSetUnreadBadge = function (count) {
+        if (!unreadBadge) return;
+        const safeCount = Number(count || 0);
+        unreadBadge.textContent = safeCount;
+        unreadBadge.classList.toggle("is-hidden", safeCount < 1);
+        if (messageLink) {
+            messageLink.classList.toggle("has-unread", safeCount > 0);
+        }
+        document.title = safeCount > 0 ? "(" + safeCount + ") " + baseTitle : baseTitle;
+    };
+
+    function dispatchSupportEvent(data) {
+        window.dispatchEvent(new CustomEvent("eventqr:support", {detail: data}));
+    }
+
     async function pollNotifications() {
         try {
             const response = await fetch("{% url 'invitations:notifications-poll' %}", {
@@ -104,12 +131,67 @@ document.addEventListener("DOMContentLoaded", function () {
                 playIncomingTone();
             }
             previousUnread = data.unread_count;
+            window.eventQrSetUnreadBadge(data.unread_count);
         } catch (error) {
         }
     }
 
-    pollNotifications();
-    setInterval(pollNotifications, 5000);
+    function startFallbackPolling() {
+        if (fallbackInterval) return;
+        pollNotifications();
+        fallbackInterval = setInterval(pollNotifications, 5000);
+    }
+
+    function stopFallbackPolling() {
+        if (!fallbackInterval) return;
+        clearInterval(fallbackInterval);
+        fallbackInterval = null;
+    }
+
+    function connectSupportSocket() {
+        if (!window.WebSocket) {
+            startFallbackPolling();
+            return;
+        }
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const socketUrl = protocol + "://" + window.location.host + "/ws/support/";
+        const socket = new WebSocket(socketUrl);
+        window.eventQrSupportSocket = socket;
+        window.eventQrSupportSocketActive = false;
+
+        socket.addEventListener("open", function () {
+            window.eventQrSupportSocketActive = true;
+            stopFallbackPolling();
+            pollNotifications();
+        });
+
+        socket.addEventListener("message", function (event) {
+            try {
+                const data = JSON.parse(event.data);
+                if (typeof data.unread_count !== "undefined") {
+                    if (previousUnread !== null && data.unread_count > previousUnread) {
+                        playIncomingTone();
+                    }
+                    previousUnread = data.unread_count;
+                    window.eventQrSetUnreadBadge(data.unread_count);
+                }
+                dispatchSupportEvent(data);
+            } catch (error) {
+            }
+        });
+
+        socket.addEventListener("close", function () {
+            window.eventQrSupportSocketActive = false;
+            startFallbackPolling();
+            window.setTimeout(connectSupportSocket, 4000);
+        });
+
+        socket.addEventListener("error", function () {
+            socket.close();
+        });
+    }
+
+    connectSupportSocket();
 });
 </script>
 {% endif %}

@@ -39,7 +39,7 @@
                 {% for choice in rating_form.stars %}
                 <label class="star-option">
                     {{ choice.tag }}
-                    <span class="star-visual">★</span>
+                    <span class="star-visual">&#9733;</span>
                 </label>
                 {% endfor %}
             </div>
@@ -70,7 +70,7 @@
             {% empty %}
             <article class="empty-card">
                 <h3>{% tr "Aucun invite pour le moment" "No guests yet" %}</h3>
-                <p>{% tr "Créez votre premier billet d invitation pour commencer." "Create your first invitation pass to get started." %}</p>
+                <p>{% tr "Creez votre premier billet d invitation pour commencer." "Create your first invitation pass to get started." %}</p>
                 <a class="button button-primary" href="{% url 'invitations:create' %}">{% tr "Commencer" "Get started" %}</a>
             </article>
             {% endfor %}
@@ -97,6 +97,35 @@
                 <p>{{ plan.range }}</p>
             </article>
             {% endfor %}
+        </div>
+    </section>
+
+    <section class="listing-section showcase-section">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow">{% tr "Exemples" "Examples" %}</p>
+                <h2>{% tr "Quelques invitations selon chaque categorie" "A few invitation examples by category" %}</h2>
+            </div>
+        </div>
+        <div class="card-grid">
+            <article class="invite-card showcase-card showcase-mariage">
+                <span class="badge">{% tr "Mariage" "Wedding" %}</span>
+                <h3>{% tr "Couple Mukendi" "Mukendi Couple" %}</h3>
+                <p>{% tr "Place" "Seat" %}: {% tr "Table d honneur A1" "Honor table A1" %}</p>
+                <p class="field-help">{% tr "Message: Merci de celebrer notre union avec nous." "Message: Thank you for celebrating our union with us." %}</p>
+            </article>
+            <article class="invite-card showcase-card showcase-anniversaire">
+                <span class="badge">{% tr "Anniversaire" "Birthday" %}</span>
+                <h3>{% tr "Famille Kabeya" "Kabeya Family" %}</h3>
+                <p>{% tr "Place" "Seat" %}: {% tr "Rang B - Siege 12" "Row B - Seat 12" %}</p>
+                <p class="field-help">{% tr "Message: Votre presence rendra la fete encore plus belle." "Message: Your presence will make the party even brighter." %}</p>
+            </article>
+            <article class="invite-card showcase-card showcase-concert">
+                <span class="badge">{% tr "Concert" "Concert" %}</span>
+                <h3>{% tr "VIP Lubumbashi" "Lubumbashi VIP" %}</h3>
+                <p>{% tr "Place" "Seat" %}: {% tr "Zone Scene C3" "Stage zone C3" %}</p>
+                <p class="field-help">{% tr "Message: Preparez-vous pour une ambiance inoubliable." "Message: Get ready for an unforgettable atmosphere." %}</p>
+            </article>
         </div>
     </section>
     {% endif %}

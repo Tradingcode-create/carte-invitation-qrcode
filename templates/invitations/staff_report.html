@@ -44,42 +44,118 @@
         </div>
     </section>
 
-    <section class="listing-section no-print">
+    <section id="messages" class="listing-section no-print">
         <div class="section-head">
             <div>
                 <p class="eyebrow">{% tr "Support" "Support" %}</p>
-                <h2>{% tr "Messages utilisateurs en direct" "Live user messages" %}</h2>
+                <h2>{% tr "Messagerie utilisateurs en direct" "Live user messaging" %}</h2>
             </div>
         </div>
-        <div id="staff-support-feed" class="card-grid">
-            {% for support_message in support_messages %}
-            <article class="invite-card admin-support-card">
-                <span class="badge">{{ support_message.organizer.user.username }}</span>
-                <h3>{{ support_message.subject }}</h3>
-                <p>{{ support_message.message }}</p>
-                <dl>
-                    <div><dt>{% tr "Expediteur" "Sender" %}</dt><dd>{{ support_message.sender_label }}</dd></div>
-                    <div><dt>{% tr "Date" "Date" %}</dt><dd>{{ support_message.created_at|date:"d/m/Y H:i" }}</dd></div>
-                </dl>
-                <form method="post" action="{% url 'invitations:staff-reply-support' support_message.organizer_id %}" class="invitation-form">
-                    {% csrf_token %}
-                    <div class="field-group">
-                        <input class="form-control" type="text" name="subject" value="Re: {{ support_message.subject }}" placeholder="{% tr 'Sujet de la reponse' 'Reply subject' %}">
-                    </div>
-                    <div class="field-group">
-                        <textarea class="form-control" name="message" rows="4" placeholder="{% tr 'Votre reponse a l utilisateur' 'Your reply to the user' %}"></textarea>
-                    </div>
-                    <button class="button button-secondary" type="submit">{% tr "Repondre" "Reply" %}</button>
-                </form>
-                <form method="post" action="{% url 'invitations:staff-toggle-support' support_message.organizer_id %}">
-                    {% csrf_token %}
-                    <button class="button button-secondary" type="submit">
-                        {% if support_message.organizer.support_user_can_send %}{% tr "Bloquer l envoi user" "Block user sending" %}{% else %}{% tr "Reautoriser l envoi user" "Re-enable user sending" %}{% endif %}
+
+        {% if support_threads %}
+        <div class="chat-workspace admin-chat-workspace" id="staff-support-feed">
+            <aside class="conversation-sidebar">
+                <div class="conversation-list">
+                    {% for thread in support_threads %}
+                    {% with latest_message=thread.latest_support_message %}
+                    <button
+                        type="button"
+                        class="conversation-item {% if forloop.first %}is-active{% endif %}"
+                        data-thread-select="{{ thread.id }}"
+                    >
+                        <div class="conversation-topline">
+                            <strong>{{ thread.user.get_full_name|default:thread.user.username }}</strong>
+                            <small class="field-help">{% if latest_message %}{{ latest_message.created_at|date:"d/m/Y H:i" }}{% endif %}</small>
+                        </div>
+                        <p>{{ thread.user.username }}{% if thread.phone_number %} | {{ thread.phone_number }}{% endif %}</p>
+                        <span class="field-help conversation-summary" data-thread-preview-message>{{ latest_message.message|truncatechars:90 }}</span>
+                        <div class="conversation-badge-row">
+                            <span class="badge">{% if thread.support_user_can_send %}{% tr "Ouvert" "Open" %}{% else %}{% tr "Suspendu" "Paused" %}{% endif %}</span>
+                            {% if thread.unread_for_admin_count %}
+                            <span class="nav-badge" data-thread-unread>{{ thread.unread_for_admin_count }}</span>
+                            {% endif %}
+                        </div>
                     </button>
-                </form>
-            </article>
-            {% endfor %}
+                    {% endwith %}
+                    {% endfor %}
+                </div>
+            </aside>
+
+            <section class="chat-stage">
+                {% for thread in support_threads %}
+                <article class="conversation-panel {% if forloop.first %}is-active{% endif %}" data-thread-panel="{{ thread.id }}">
+                    <div class="chat-shell chat-shell-expanded">
+                        <div class="chat-header">
+                            <div>
+                                <strong>{{ thread.user.get_full_name|default:thread.user.username }}</strong>
+                                <p class="field-help">
+                                    {{ thread.user.username }}
+                                    {% if thread.phone_number %} | {{ thread.phone_number }}{% endif %}
+                                    | {{ thread.get_event_label }}
+                                </p>
+                            </div>
+                            <div class="chat-header-side">
+                                <span class="badge">{% if thread.support_user_can_send %}{% tr "Utilisateur autorise" "User can reply" %}{% else %}{% tr "Utilisateur bloque" "User blocked" %}{% endif %}</span>
+                            </div>
+                        </div>
+
+                        <div class="message-thread message-thread-whatsapp" data-thread-list>
+                            {% for item in thread.thread_messages %}
+                            <article data-message-id="{{ item.id }}" class="thread-bubble {% if item.sender_type == 'admin' %}thread-bubble-admin{% else %}thread-bubble-user{% endif %}">
+                                <div class="thread-meta">
+                                    <span class="badge">
+                                        {% if item.sender_type == 'admin' %}
+                                            {% tr "Administration" "Administration" %}
+                                        {% else %}
+                                            {{ thread.user.username }}
+                                        {% endif %}
+                                    </span>
+                                    <small class="field-help">{{ item.created_at|date:"d/m/Y H:i" }}</small>
+                                </div>
+                                <h3>{{ item.subject }}</h3>
+                                <p>{{ item.message }}</p>
+                                {% if item.sender_type == 'admin' %}
+                                <div class="bubble-status-row">
+                                    <span
+                                        class="message-status message-status-{{ item.delivery_state }}"
+                                        data-message-status-id="{{ item.id }}"
+                                    >&#10003;&#10003; {{ item.delivery_label }}</span>
+                                </div>
+                                {% endif %}
+                            </article>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <form method="post" action="{% url 'invitations:staff-reply-support' thread.id %}" class="chat-composer admin-reply-form">
+                        {% csrf_token %}
+                        <div class="field-group">
+                            <input class="form-control" type="text" name="subject" value="Re: {{ thread.support_thread_subject|default:'Discussion support' }}" placeholder="{% tr 'Sujet de la reponse' 'Reply subject' %}">
+                        </div>
+                        <div class="field-group">
+                            <textarea class="form-control" name="message" rows="4" placeholder="{% tr 'Votre reponse a l utilisateur' 'Your reply to the user' %}"></textarea>
+                        </div>
+                        <div class="action-row">
+                            <button class="button button-secondary" type="submit">{% tr "Repondre" "Reply" %}</button>
+                        </div>
+                    </form>
+
+                    <form method="post" action="{% url 'invitations:staff-toggle-support' thread.id %}" class="admin-toggle-form">
+                        {% csrf_token %}
+                        <button class="button button-secondary" type="submit">
+                            {% if thread.support_user_can_send %}{% tr "Bloquer l envoi user" "Block user sending" %}{% else %}{% tr "Reautoriser l envoi user" "Re-enable user sending" %}{% endif %}
+                        </button>
+                    </form>
+                </article>
+                {% endfor %}
+            </section>
         </div>
+        {% else %}
+        <article class="empty-card">
+            <h3>{% tr "Aucune conversation pour le moment" "No conversations yet" %}</h3>
+            <p>{% tr "Les premiers messages utilisateurs apparaitront ici sous forme de discussion." "The first user messages will appear here as conversations." %}</p>
+        </article>
+        {% endif %}
     </section>
 
     <section class="listing-section no-print">
@@ -179,24 +255,235 @@ document.addEventListener("DOMContentLoaded", function () {
     renderBarChart("revenue-chart", "revenue-data", "label", "total", "#9a6027");
     renderBarChart("visits-chart", "visits-data", "label", "total", "#5b5bd6");
 
-    let latestTimestamp = "";
-    async function refreshSupportFeed() {
+    const conversationItems = Array.from(document.querySelectorAll("[data-thread-select]"));
+    const conversationPanels = Array.from(document.querySelectorAll("[data-thread-panel]"));
+
+    function scrollAllThreads() {
+        document.querySelectorAll("[data-thread-list]").forEach(function (node) {
+            node.scrollTop = node.scrollHeight;
+        });
+    }
+
+    function activateThread(threadId) {
+        conversationItems.forEach(function (item) {
+            item.classList.toggle("is-active", item.dataset.threadSelect === String(threadId));
+        });
+        conversationPanels.forEach(function (panel) {
+            panel.classList.toggle("is-active", panel.dataset.threadPanel === String(threadId));
+        });
+        const currentPanel = document.querySelector('[data-thread-panel="' + threadId + '"] [data-thread-list]');
+        if (currentPanel) {
+            currentPanel.scrollTop = currentPanel.scrollHeight;
+        }
+        markThreadAsRead(threadId);
+    }
+
+    async function markThreadAsRead(threadId) {
         try {
-            const response = await fetch("{% url 'invitations:notifications-poll' %}", {
-                headers: {"X-Requested-With": "XMLHttpRequest"}
+            const response = await fetch("{% url 'invitations:staff-mark-support-read' 0 %}".replace("/0/", "/" + threadId + "/"), {
+                method: "POST",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest",
+                    "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
             });
             if (!response.ok) return;
             const data = await response.json();
-            if (latestTimestamp && data.latest_timestamp && data.latest_timestamp !== latestTimestamp) {
-                window.location.reload();
+            const threadCard = document.querySelector('[data-thread-select="' + threadId + '"]');
+            if (threadCard) {
+                updateThreadUnread(threadCard, data.thread_unread_count || 0);
             }
-            latestTimestamp = data.latest_timestamp || latestTimestamp;
+            if (window.eventQrSetUnreadBadge) {
+                window.eventQrSetUnreadBadge(data.unread_count || 0);
+            }
         } catch (error) {
         }
     }
 
-    refreshSupportFeed();
-    setInterval(refreshSupportFeed, 5000);
+    function buildAdminBubble(item) {
+        const article = document.createElement("article");
+        article.dataset.messageId = item.id;
+        article.className = "thread-bubble " + (item.sender_type === "admin" ? "thread-bubble-admin" : "thread-bubble-user");
+
+        const meta = document.createElement("div");
+        meta.className = "thread-meta";
+
+        const badge = document.createElement("span");
+        badge.className = "badge";
+        badge.textContent = item.sender_type === "admin" ? "Administration" : item.organizer_username;
+
+        const time = document.createElement("small");
+        time.className = "field-help";
+        time.textContent = item.created_at;
+
+        const title = document.createElement("h3");
+        title.textContent = item.subject;
+
+        const body = document.createElement("p");
+        body.textContent = item.message;
+
+        meta.appendChild(badge);
+        meta.appendChild(time);
+        article.appendChild(meta);
+        article.appendChild(title);
+        article.appendChild(body);
+        if (item.sender_type === "admin") {
+            const footer = document.createElement("div");
+            footer.className = "bubble-status-row";
+
+            const status = document.createElement("span");
+            status.className = "message-status message-status-" + (item.delivery_state || "delivered");
+            status.dataset.messageStatusId = item.id;
+            status.innerHTML = "&#10003;&#10003; " + (item.delivery_label || "Distribue");
+
+            footer.appendChild(status);
+            article.appendChild(footer);
+        }
+        return article;
+    }
+
+    function updateMessageStatus(messageIds, state, label) {
+        (messageIds || []).forEach(function (messageId) {
+            const node = document.querySelector('[data-message-status-id="' + messageId + '"]');
+            if (!node) return;
+            node.className = "message-status message-status-" + state;
+            node.innerHTML = "&#10003;&#10003; " + label;
+        });
+    }
+
+    function ensureUnreadBadge(threadCard) {
+        let badge = threadCard.querySelector("[data-thread-unread]");
+        if (!badge) {
+            const side = threadCard.querySelector(".conversation-badge-row");
+            if (!side) return null;
+            badge = document.createElement("span");
+            badge.className = "nav-badge";
+            badge.dataset.threadUnread = "1";
+            side.appendChild(badge);
+        }
+        return badge;
+    }
+
+    function updateThreadUnread(threadCard, count) {
+        const badge = ensureUnreadBadge(threadCard);
+        if (!badge) return;
+        if (Number(count || 0) < 1) {
+            badge.remove();
+            return;
+        }
+        badge.textContent = count;
+    }
+
+    function updateThreadPreview(item) {
+        const threadCard = document.querySelector('[data-thread-select="' + item.organizer_id + '"]');
+        if (!threadCard) return;
+        const summary = threadCard.querySelector("[data-thread-preview-message]");
+        const timeNode = threadCard.querySelector(".conversation-topline .field-help");
+        if (summary) {
+            summary.textContent = item.message.length > 90 ? item.message.slice(0, 87) + "..." : item.message;
+        }
+        if (timeNode) {
+            timeNode.textContent = item.created_at;
+        }
+    }
+
+    function appendAdminMessage(item, unreadCount) {
+        const threadCard = document.querySelector('[data-thread-select="' + item.organizer_id + '"]');
+        const threadPanel = document.querySelector('[data-thread-panel="' + item.organizer_id + '"]');
+        if (!threadCard || !threadPanel) {
+            window.location.reload();
+            return;
+        }
+        const threadList = threadPanel.querySelector("[data-thread-list]");
+        if (!threadList) return;
+        if (!threadList.querySelector('[data-message-id="' + item.id + '"]')) {
+            threadList.appendChild(buildAdminBubble(item));
+        }
+        threadList.scrollTop = threadList.scrollHeight;
+        updateThreadPreview(item);
+        updateThreadUnread(threadCard, unreadCount);
+        if (item.sender_type === "user" && threadPanel.classList.contains("is-active")) {
+            markThreadAsRead(item.organizer_id);
+        }
+    }
+
+    window.addEventListener("eventqr:support", function (event) {
+        const data = event.detail || {};
+        if (data.kind === "support.message" && data.message_item) {
+            appendAdminMessage(data.message_item, data.thread_unread_count || 0);
+        }
+        if (data.kind === "support.read" && data.organizer_id) {
+            const threadCard = document.querySelector('[data-thread-select="' + data.organizer_id + '"]');
+            if (threadCard) {
+                updateThreadUnread(threadCard, data.thread_unread_count || 0);
+            }
+            updateMessageStatus(data.read_by_user_ids, "read", "Lu");
+            if (window.eventQrSetUnreadBadge) {
+                window.eventQrSetUnreadBadge(data.unread_count || 0);
+            }
+        }
+        if (data.kind === "support.permissions") {
+            window.location.reload();
+        }
+    });
+
+    conversationItems.forEach(function (item) {
+        item.addEventListener("click", function () {
+            activateThread(item.dataset.threadSelect);
+        });
+    });
+
+    document.querySelectorAll(".admin-reply-form").forEach(function (form) {
+        form.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            const submitButton = form.querySelector('button[type="submit"]');
+            const textarea = form.querySelector('textarea[name="message"]');
+            const formData = new FormData(form);
+            if (submitButton) submitButton.disabled = true;
+            try {
+                const response = await fetch(form.action, {
+                    method: "POST",
+                    body: formData,
+                    headers: {"X-Requested-With": "XMLHttpRequest"}
+                });
+                if (!response.ok) {
+                    return;
+                }
+                if (textarea) textarea.value = "";
+            } catch (error) {
+            } finally {
+                if (submitButton) submitButton.disabled = false;
+            }
+        });
+    });
+
+    document.querySelectorAll(".admin-toggle-form").forEach(function (form) {
+        form.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            const submitButton = form.querySelector('button[type="submit"]');
+            const formData = new FormData(form);
+            if (submitButton) submitButton.disabled = true;
+            try {
+                const response = await fetch(form.action, {
+                    method: "POST",
+                    body: formData,
+                    headers: {"X-Requested-With": "XMLHttpRequest"}
+                });
+                if (!response.ok) {
+                    return;
+                }
+                window.location.reload();
+            } catch (error) {
+            } finally {
+                if (submitButton) submitButton.disabled = false;
+            }
+        });
+    });
+
+    if (conversationItems.length) {
+        activateThread(conversationItems[0].dataset.threadSelect);
+    }
+    scrollAllThreads();
 });
 </script>
 {% endblock %}

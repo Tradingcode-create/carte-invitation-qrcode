@@ -7,15 +7,21 @@ from urllib.parse import quote
 from datetime import timedelta
 
 from django.conf import settings
+try:
+    from asgiref.sync import async_to_sync
+    from channels.layers import get_channel_layer
+except ImportError:  # pragma: no cover - websocket support optional locally
+    async_to_sync = None
+    get_channel_layer = None
 from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.core.mail import send_mail
-from django.db.models import Q, Sum
+from django.db.models import Max, Q, Sum
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 from django.http import FileResponse, Http404, HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.template.loader import render_to_string
@@ -36,7 +42,153 @@ from .models import Invitation, OrganizerProfile, PaymentTransaction, SiteRating
 
 LANGUAGE_SESSION_KEY = "django_language"
 
-#------
+
+def _is_ajax_request(request):
+    return request.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+
+def _serialize_support_message(message, for_staff=False):
+    delivery_state = "read" if (
+        (message.sender_type == SupportMessage.SENDER_ADMIN and message.is_read_by_user)
+        or (message.sender_type == SupportMessage.SENDER_USER and message.is_read_by_admin)
+    ) else "delivered"
+    return {
+        "id": message.id,
+        "organizer_id": message.organizer_id,
+        "organizer_username": message.organizer.user.username,
+        "organizer_display_name": message.organizer.user.get_full_name() or message.organizer.user.username,
+        "sender_type": message.sender_type,
+        "sender_label": (
+            "Administration"
+            if message.sender_type == SupportMessage.SENDER_ADMIN
+            else (message.organizer.user.username if for_staff else tr_text("Vous", "You"))
+        ),
+        "subject": message.subject,
+        "message": message.message,
+        "created_at": timezone.localtime(message.created_at).strftime("%d/%m/%Y %H:%M"),
+        "created_at_iso": message.created_at.isoformat(),
+        "delivery_state": delivery_state,
+        "delivery_label": tr_text("Lu", "Read") if delivery_state == "read" else tr_text("Distribue", "Delivered"),
+        "is_read_by_user": message.is_read_by_user,
+        "is_read_by_admin": message.is_read_by_admin,
+    }
+
+
+def _broadcast_group(group_name, payload):
+    if async_to_sync is None or get_channel_layer is None:
+        return
+    layer = get_channel_layer()
+    if layer is None:
+        return
+    async_to_sync(layer.group_send)(
+        group_name,
+        {
+            "type": "support.event",
+            "payload": payload,
+        },
+    )
+
+
+def _broadcast_support_message(message):
+    unread_for_user = message.organizer.support_messages.filter(
+        sender_type=SupportMessage.SENDER_ADMIN,
+        is_read_by_user=False,
+    ).count()
+    unread_for_admin_thread = message.organizer.support_messages.filter(
+        sender_type=SupportMessage.SENDER_USER,
+        is_read_by_admin=False,
+    ).count()
+    unread_for_admin_total = SupportMessage.objects.filter(
+        sender_type=SupportMessage.SENDER_USER,
+        is_read_by_admin=False,
+    ).count()
+    latest_timestamp = message.created_at.isoformat()
+
+    _broadcast_group(
+        f"support_user_{message.organizer_id}",
+        {
+            "kind": "support.message",
+            "unread_count": unread_for_user,
+            "latest_timestamp": latest_timestamp,
+            "message_item": _serialize_support_message(message, for_staff=False),
+        },
+    )
+    _broadcast_group(
+        "support_staff",
+        {
+            "kind": "support.message",
+            "unread_count": unread_for_admin_total,
+            "thread_unread_count": unread_for_admin_thread,
+            "latest_timestamp": latest_timestamp,
+            "message_item": _serialize_support_message(message, for_staff=True),
+        },
+    )
+
+
+def _broadcast_support_permissions(profile):
+    _broadcast_group(
+        f"support_user_{profile.id}",
+        {
+            "kind": "support.permissions",
+            "can_send_message": profile.support_user_can_send,
+        },
+    )
+
+
+def _broadcast_support_read_state(profile, read_by_admin_ids=None, read_by_user_ids=None):
+    staff_payload = {
+        "kind": "support.read",
+        "organizer_id": profile.id,
+        "thread_unread_count": profile.support_messages.filter(
+            sender_type=SupportMessage.SENDER_USER,
+            is_read_by_admin=False,
+        ).count(),
+        "user_unread_count": profile.support_messages.filter(
+            sender_type=SupportMessage.SENDER_ADMIN,
+            is_read_by_user=False,
+        ).count(),
+        "unread_count": SupportMessage.objects.filter(
+            sender_type=SupportMessage.SENDER_USER,
+            is_read_by_admin=False,
+        ).count(),
+        "read_by_admin_ids": read_by_admin_ids or [],
+        "read_by_user_ids": read_by_user_ids or [],
+    }
+    user_payload = {
+        "kind": "support.read",
+        "organizer_id": profile.id,
+        "thread_unread_count": profile.support_messages.filter(
+            sender_type=SupportMessage.SENDER_USER,
+            is_read_by_admin=False,
+        ).count(),
+        "unread_count": profile.support_messages.filter(
+            sender_type=SupportMessage.SENDER_ADMIN,
+            is_read_by_user=False,
+        ).count(),
+        "read_by_admin_ids": read_by_admin_ids or [],
+        "read_by_user_ids": read_by_user_ids or [],
+    }
+    _broadcast_group(
+        "support_staff",
+        staff_payload,
+    )
+    _broadcast_group(
+        f"support_user_{profile.id}",
+        user_payload,
+    )
+
+
+def _mark_admin_messages_read_by_user(profile):
+    unread_ids = list(
+        profile.support_messages.filter(
+            sender_type=SupportMessage.SENDER_ADMIN,
+            is_read_by_user=False,
+        ).values_list("id", flat=True)
+    )
+    if unread_ids:
+        profile.support_messages.filter(id__in=unread_ids).update(is_read_by_user=True)
+        _broadcast_support_read_state(profile, read_by_user_ids=unread_ids)
+    return unread_ids
 
 
 
@@ -628,7 +780,30 @@ class StaffReportView(StaffRequiredMixin, TemplateView):
         transactions = PaymentTransaction.objects.select_related(
             "subscription", "subscription__organizer", "subscription__organizer__user"
         )[:20]
-        support_messages = SupportMessage.objects.select_related("organizer", "organizer__user", "sender_user").order_by("-created_at")[:12]
+        support_threads = list(
+            OrganizerProfile.objects.select_related("user")
+            .annotate(
+                latest_support_at=Max("support_messages__created_at"),
+                unread_for_admin_count=Count(
+                    "support_messages",
+                    filter=Q(
+                        support_messages__sender_type=SupportMessage.SENDER_USER,
+                        support_messages__is_read_by_admin=False,
+                    ),
+                ),
+            )
+            .filter(latest_support_at__isnull=False)
+            .prefetch_related(
+                Prefetch(
+                    "support_messages",
+                    queryset=SupportMessage.objects.select_related("sender_user").order_by("created_at"),
+                )
+            )
+            .order_by("-latest_support_at", "user__username")
+        )
+        for thread in support_threads:
+            thread.thread_messages = list(thread.support_messages.all())
+            thread.latest_support_message = thread.thread_messages[-1] if thread.thread_messages else None
         connected_profiles = _connected_profiles_queryset()
         chart_data = build_staff_stats()
         context.update(
@@ -636,7 +811,7 @@ class StaffReportView(StaffRequiredMixin, TemplateView):
                 "profiles": profiles,
                 "subscriptions": subscriptions,
                 "transactions": transactions,
-                "support_messages": support_messages,
+                "support_threads": support_threads,
                 "connected_profiles": connected_profiles,
                 "chart_data": chart_data,
                 "totals": {
@@ -679,9 +854,12 @@ class ContactAdminView(LoginRequiredMixin, TemplateView):
         context["reply_form"] = kwargs.get("reply_form") or ContactAdminReplyForm()
         profile = getattr(self.request.user, "organizer_profile", None)
         if profile:
-            unread_messages = profile.support_messages.filter(sender_type=SupportMessage.SENDER_ADMIN, is_read_by_user=False)
-            unread_messages.update(is_read_by_user=True)
-            context["messages_thread"] = profile.support_messages.select_related("sender_user").order_by("-created_at")[:50]
+            _mark_admin_messages_read_by_user(profile)
+            thread_messages = list(
+                profile.support_messages.select_related("sender_user").order_by("created_at")[:50]
+            )
+            context["messages_thread"] = thread_messages
+            context["latest_thread_message"] = thread_messages[-1] if thread_messages else None
             context["thread_started"] = profile.support_messages.exists()
             context["can_send_message"] = profile.support_user_can_send
         return context
@@ -714,7 +892,7 @@ class ContactAdminView(LoginRequiredMixin, TemplateView):
                 [settings.ADMIN_CONTACT_EMAIL],
                 fail_silently=True,
             )
-            SupportMessage.objects.create(
+            support_message = SupportMessage.objects.create(
                 organizer=profile,
                 sender_type=SupportMessage.SENDER_USER,
                 sender_user=request.user,
@@ -723,10 +901,20 @@ class ContactAdminView(LoginRequiredMixin, TemplateView):
                 is_read_by_admin=False,
                 is_read_by_user=True,
             )
+            _broadcast_support_message(support_message)
             profile.support_thread_subject = form.cleaned_data["subject"]
             profile.save(update_fields=["support_thread_subject"])
             messages.success(request, "Votre message a ete envoye a l'administration.")
+            if _is_ajax_request(request):
+                return JsonResponse(
+                    {
+                        "ok": True,
+                        "message_item": _serialize_support_message(support_message, for_staff=False),
+                    }
+                )
             return redirect("invitations:contact-admin")
+        if _is_ajax_request(request):
+            return JsonResponse({"ok": False, "errors": form.errors}, status=400)
         return self.render_to_response(self.get_context_data(form=form))
 
 
@@ -748,7 +936,7 @@ class ContactAdminReplyView(LoginRequiredMixin, View):
             messages.error(request, "Merci de verifier votre reponse avant envoi.")
             return redirect("invitations:contact-admin")
 
-        SupportMessage.objects.create(
+        support_message = SupportMessage.objects.create(
             organizer=profile,
             sender_type=SupportMessage.SENDER_USER,
             sender_user=request.user,
@@ -757,6 +945,7 @@ class ContactAdminReplyView(LoginRequiredMixin, View):
             is_read_by_admin=False,
             is_read_by_user=True,
         )
+        _broadcast_support_message(support_message)
         send_mail(
             f"[Suite utilisateur] {profile.support_thread_subject or 'Suite de la discussion'}",
             form.cleaned_data["message"],
@@ -765,6 +954,13 @@ class ContactAdminReplyView(LoginRequiredMixin, View):
             fail_silently=True,
         )
         messages.success(request, "Votre reponse a ete envoyee a l'administration.")
+        if _is_ajax_request(request):
+            return JsonResponse(
+                {
+                    "ok": True,
+                    "message_item": _serialize_support_message(support_message, for_staff=False),
+                }
+            )
         return redirect("invitations:contact-admin")
 
 
@@ -774,9 +970,23 @@ class StaffReplySupportView(StaffRequiredMixin, View):
         form = AdminSupportReplyForm(request.POST)
         if not form.is_valid():
             messages.error(request, "La reponse admin est invalide.")
-            return redirect("invitations:staff-report")
+            if _is_ajax_request(request):
+                return JsonResponse({"ok": False, "errors": form.errors}, status=400)
+            return redirect(f"{reverse('invitations:staff-report')}#messages")
 
-        SupportMessage.objects.create(
+        read_ids = list(
+            profile.support_messages.filter(
+                sender_type=SupportMessage.SENDER_USER,
+                is_read_by_admin=False,
+            ).values_list("id", flat=True)
+        )
+        profile.support_messages.filter(
+            sender_type=SupportMessage.SENDER_USER,
+            is_read_by_admin=False,
+        ).update(is_read_by_admin=True)
+        if read_ids:
+            _broadcast_support_read_state(profile, read_by_admin_ids=read_ids)
+        support_message = SupportMessage.objects.create(
             organizer=profile,
             sender_type=SupportMessage.SENDER_ADMIN,
             sender_user=request.user,
@@ -785,6 +995,7 @@ class StaffReplySupportView(StaffRequiredMixin, View):
             is_read_by_admin=True,
             is_read_by_user=False,
         )
+        _broadcast_support_message(support_message)
         send_mail(
             f"[Administration] {form.cleaned_data['subject']}",
             form.cleaned_data["message"],
@@ -793,7 +1004,14 @@ class StaffReplySupportView(StaffRequiredMixin, View):
             fail_silently=True,
         )
         messages.success(request, "La reponse a ete enregistree et envoyee.")
-        return redirect("invitations:staff-report")
+        if _is_ajax_request(request):
+            return JsonResponse(
+                {
+                    "ok": True,
+                    "message_item": _serialize_support_message(support_message, for_staff=True),
+                }
+            )
+        return redirect(f"{reverse('invitations:staff-report')}#messages")
 
 
 class StaffToggleSupportView(StaffRequiredMixin, View):
@@ -801,13 +1019,48 @@ class StaffToggleSupportView(StaffRequiredMixin, View):
         profile = get_object_or_404(OrganizerProfile, pk=organizer_id)
         profile.support_user_can_send = not profile.support_user_can_send
         profile.save(update_fields=["support_user_can_send"])
+        _broadcast_support_permissions(profile)
         messages.success(
             request,
             "L'envoi de messages utilisateur a ete active."
             if profile.support_user_can_send
             else "L'envoi de messages utilisateur a ete desactive.",
         )
-        return redirect("invitations:staff-report")
+        if _is_ajax_request(request):
+            return JsonResponse({"ok": True, "can_send_message": profile.support_user_can_send})
+        return redirect(f"{reverse('invitations:staff-report')}#messages")
+
+
+@login_required
+@require_POST
+def mark_support_thread_read(request, organizer_id):
+    if not request.user.is_staff:
+        return JsonResponse({"ok": False}, status=403)
+
+    profile = get_object_or_404(OrganizerProfile, pk=organizer_id)
+    read_ids = list(
+        profile.support_messages.filter(
+            sender_type=SupportMessage.SENDER_USER,
+            is_read_by_admin=False,
+        ).values_list("id", flat=True)
+    )
+    profile.support_messages.filter(
+        sender_type=SupportMessage.SENDER_USER,
+        is_read_by_admin=False,
+    ).update(is_read_by_admin=True)
+    total_unread = SupportMessage.objects.filter(
+        sender_type=SupportMessage.SENDER_USER,
+        is_read_by_admin=False,
+    ).count()
+    _broadcast_support_read_state(profile, read_by_admin_ids=read_ids)
+    return JsonResponse(
+        {
+            "ok": True,
+            "organizer_id": profile.id,
+            "thread_unread_count": 0,
+            "unread_count": total_unread,
+        }
+    )
 
 
 @login_required
@@ -816,21 +1069,15 @@ def contact_admin_thread_data(request):
     if not profile:
         return JsonResponse({"messages": [], "latest_timestamp": ""})
 
-    profile.support_messages.filter(sender_type=SupportMessage.SENDER_ADMIN, is_read_by_user=False).update(is_read_by_user=True)
+    _mark_admin_messages_read_by_user(profile)
     thread_messages = list(
-        profile.support_messages.select_related("sender_user").order_by("-created_at")[:50]
+        profile.support_messages.select_related("sender_user").order_by("created_at")[:50]
     )
-    latest = thread_messages[0].created_at.isoformat() if thread_messages else ""
+    latest = thread_messages[-1].created_at.isoformat() if thread_messages else ""
     return JsonResponse(
         {
             "messages": [
-                {
-                    "sender_type": item.sender_type,
-                    "sender_label": item.sender_label,
-                    "subject": item.subject,
-                    "message": item.message,
-                    "created_at": timezone.localtime(item.created_at).strftime("%d/%m/%Y %H:%M"),
-                }
+                _serialize_support_message(item, for_staff=False)
                 for item in thread_messages
             ],
             "latest_timestamp": latest,
