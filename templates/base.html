@@ -21,15 +21,6 @@
 
         <nav class="nav-links">
             {% if user.is_authenticated %}
-            <span class="session-pill">
-                <span class="session-dot"></span>
-                <strong>{{ user.get_full_name|default:user.username }}</strong>
-                <span>{% tr "Connecte" "Online" %}</span>
-                <form method="post" action="{% url 'logout' %}">
-                    {% csrf_token %}
-                    <button class="button button-secondary button-small session-logout" type="submit">{% tr "Deconnexion" "Log out" %}</button>
-                </form>
-            </span>
             {% if user.is_staff %}
             <a id="nav-message-link" href="{% url 'invitations:staff-report' %}#messages">
                 {% tr "Message" "Messages" %}
@@ -47,6 +38,17 @@
             </a>
             <a href="{% url 'invitations:about' %}">{% tr "A propos" "About" %}</a>
             {% endif %}
+            <span class="session-pill">
+                <span class="session-dot"></span>
+                <span class="session-copy">
+                    <strong>{{ user.get_full_name|default:user.username }}</strong>
+                    <span>{% tr "Connecte" "Online" %}</span>
+                </span>
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button class="button button-secondary button-small session-logout" type="submit">{% tr "Deconnexion" "Log out" %}</button>
+                </form>
+            </span>
             {% else %}
             <a href="{% url 'invitations:signup' %}">{% tr "Inscription" "Sign up" %}</a>
             <a href="{% url 'login' %}">{% tr "Connexion" "Log in" %}</a>

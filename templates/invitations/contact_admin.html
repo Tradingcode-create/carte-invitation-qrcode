@@ -165,8 +165,33 @@
 <script>
 document.addEventListener("DOMContentLoaded", function () {
     const thread = document.getElementById("message-thread");
+    const initialForm = document.querySelector("form.invitation-form");
     const replyForm = document.querySelector("form.chat-composer");
     const organizerId = "{{ request.user.organizer_profile.id|default:'' }}";
+
+    function triggerSubmit(form) {
+        if (!form) return;
+        if (typeof form.requestSubmit === "function") {
+            form.requestSubmit();
+            return;
+        }
+        form.dispatchEvent(new Event("submit", {bubbles: true, cancelable: true}));
+    }
+
+    function bindEnterToSend(form) {
+        if (!form) return;
+        const textarea = form.querySelector("textarea");
+        if (!textarea) return;
+        textarea.addEventListener("keydown", function (event) {
+            if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                triggerSubmit(form);
+            }
+        });
+    }
+
+    bindEnterToSend(initialForm);
+    bindEnterToSend(replyForm);
 
     if (!thread) {
         return;

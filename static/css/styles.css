@@ -85,8 +85,10 @@ p {
 }
 
 .nav-links {
+    flex: 1 1 auto;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-end;
 }
 
 .session-pill {
@@ -99,6 +101,14 @@ p {
     background: rgba(255, 255, 255, 0.78);
     border: 1px solid var(--line);
     font-size: 0.9rem;
+    margin-left: auto;
+}
+
+.session-copy {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.12rem;
+    line-height: 1.05;
 }
 
 .session-dot {
@@ -943,6 +953,14 @@ p {
     .action-row {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .nav-links {
+        justify-content: stretch;
+    }
+
+    .session-pill {
+        margin-left: 0;
     }
 
     .chat-layout,

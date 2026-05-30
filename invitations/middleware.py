@@ -13,12 +13,19 @@ LANGUAGE_SESSION_KEY = "django_language"
 
 class RequestHardeningMiddleware:
     SENSITIVE_PATHS = (
+        "/login/",
         "/accounts/login/",
+        "/signup/",
         "/inscription/",
+        "/password-reset/",
         "/accounts/password_reset/",
+        "/messages/",
         "/contact-admin/",
+        "/messages/reply/",
         "/contact-admin/repondre/",
+        "/dashboard/reply/",
         "/staff/rapport/repondre/",
+        "/pay/start/",
         "/paiement/demarrer/",
     )
 
